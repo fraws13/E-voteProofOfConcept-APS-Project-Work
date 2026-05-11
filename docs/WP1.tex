@@ -1,0 +1,113 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+
+\geometry{margin=2.5cm}
+
+\title{Algoritmi e Protocolli per la Sicurezza\\Project Work\\WP1: Modello}
+\author{Gennaro Foschillo\\ Francesco Vittorio Allocca}
+
+\begin{document}
+
+\maketitle
+
+\section{Scenario del progetto e Obiettivi}
+    Nei sistemi democratici moderni, la conduzione di elezioni sicure,
+    trasparenti e verificabili è un requisito fondamentale. Il voto elettronico,
+    inteso come la raccolta e il conteggio di voti tramite sistemi digitali, promette
+    di aumentare l’accessibilità, ridurre i costi e accelerare lo scrutinio. Tuttavia,
+    la sua adozione solleva criticità di sicurezza profonde:
+        \begin{itemize}
+        \item{Violazione della segretezza del voto;}
+        \item{Manipolazione o alterazione dei voti espressi;}
+        \item{Impossibilità per il singolo elettore di verificare che il proprio voto sia
+        stato conteggiato correttamente;}
+        \item{Attacchi alla disponibilit`a del sistema durante le operazioni di voto;}
+        \item{Coercizione o acquisto di voto, facilitati dalla mancanza di un ambiente fisicamente controllato.}
+        \end{itemize}
+    Un protocollo ideale per il voto elettronico deve garantire al contempo
+    la segretezza del voto, la verificabilit`a del risultato e la resistenza a manipo
+    lazioni, anche da parte degli stessi gestori del sistema.\\
+    L'obiettivo di questo progetto è dunque la realizzazione di un protocollo di voto elettronico
+    sicuro, considerando il contesto di un'elezione di tipo referendum binario, in cui ogni elettore 
+    può esprimere una sola preferenza tra due opzioni possibili. La scelta di questo contesto riduce
+    notevolmente la complessità progettuale del modello, permettendo di concentrarsi sulle proprietà
+    richieste dal sistema, ovvero: autenticità, unicità del voto, segretezza, integrità, verificabilità individuale e verificabilità universale.
+\section{Obiettivo del Work Package}
+    Questo work package si occuperà di definire il modello che si intende realizzare, fornendone
+    una descrizione ad alto livello. 
+    Verranno definiti i vari attori onesti del sistema, 
+    cioè le entità coinvolte per la corretta
+    realizzazione del sistema ed il suo utilizzo.\\
+    Successivamente, verranno definiti
+    i Threat Model, ovvero le entità che potenzialmente possono compromettere
+    il corretto funzionamento del sistema.\\
+    Infine, vengono definite le proprietà del sistema che si intende preservare in presenza di attacchi da parte
+    dei Threat Model.
+
+\section{Descrizione delle funzionalità del sistema}
+    La funzionalità che si intende realizzare è un sistema per la conduzione di un'elezione elettronica sicura,
+    in cui un avente diritto al voto possa autenticarsi, ottenere l'autorizzazione al voto ,
+    esprimere una sola preferenza al voto, inviare la scheda elettorale ed assicurarsi che il proprio voto
+    sia stato correttamente incluso nel conteggio finale. Il sistema deve infine permettere la pubblicazione di un risultato finale verificabile,
+    riducendo la fiducia richiesta verso un'unica entità centrale.\\
+    Per questo motivo, il sistema verrà realizzato separando logicamente le funzioni
+    descritte; in particolare, il modello separa le funzioni di autenticazione, autorizzazione, raccolta del voto e scrutinio.
+    Il principale motivo di questa scelta è ridurre il rischio che una singola componente possa associare direttamente
+    l'entità reale dell'elettore alla propria preferenza di voto.     
+\section{Attori principali}
+
+    Gli attori principali coinvolti nel sistema sono:
+
+    \begin{itemize}
+        \item \textbf{Voting Client}: Interfaccia applicativa accessibile via browser 
+        dall'utente elettore.\\
+        In particolare, dopo aver effettuato l'autenticazione
+        e ricevuta l'autorizzazione per esercitare il voto, L'applicativo permette al votante di 
+        accedere al servizio, permettendo la compilazione della scheda, l'invio del voto 
+        e la visualizzazione di una conferma di voto.\\
+        Il Client conosce l'esito del flusso di autenticazione e autorizzazione e la preferenza selezionata dall'elettore;
+        Non deve conoscere la vera identità dell'elettore per associarla al suo voto e informazioni di autorizzazione e autenticazione dell'utente.
+        \item \textbf{Identity Service Provider (ISP)}: Servizio terzo all'applicativo che permette la verifica
+        dell'identità di ogni potenziale elettore. L'obiettivo di questo servizio è unicamente quello di verificare
+        che l'utente che richiede accesso al servizio di voto sia effettivamente il soggetto dichiarato. \\
+        L'ISP non gestisce il voto, non decide autonomamente se l'utente può partecipare all'elezione e non conosce
+        la preferenza espressa, ma si occupa solo quindi di verificarne l'identità.
+        \item \textbf{Elettore Onesto}: Persona fisica avente diritto al voto che esprime una sola preferenza valida.\\
+        Il suo obiettivo è quello di autenticarsi correttamente, ottenere l'autorizzazione al voto ed esprimere una preferenza di voto.
+        L'elettore onesto una volta inviata la tessera elettorale non ripudia la scelta fatta. 
+        \item \textbf{Government Authority}: è l'entità che si occupa di verificare l'idoneità alla partecipazione all'elezione per un potenziale elettore onesto,
+        dopo che ha effettuato l'autenticazione per mezzo dell'Identity Service Provider. \\
+        L'obiettivo di questa entità è quello di garantire la partecipazione all'elezione solo agli elettori legittimi e rilasciare per ogni elettore 
+        un'autorizzazione che gli permetterà di esercitare il voto.\\
+        Quest'entità deve conoscere l'esito dell'autenticazione, la sua identità reale e lo stato di autorizzazione al voto, 
+        ma non deve conoscere la sua preferenza espressa al voto.
+        \item \textbf{Voting Server}: è l'entità incaricata al ricevimento delle schede elettorali dagli elettori autorizzati al voto
+        che hanno esercitato il loro diritto al voto e registrare la preferenza di ognuno su un database.\\ Il Voting server deve consentire
+        la registrazione dei soli voti provenienti dai soggetti autorizzati, impedire voti duplicati e garantire un meccanismo di non repudio
+        per i voti espressi, impedendo quindi che i voti possano essere modificati o rimossi.\\
+        Quest'entità non dovrebbe conoscere la vera identità dell'elettore onesto, ma solo le informazioni utili a stabilire che il voto proviene
+        da un soggetto autorizzato.
+        \item \textbf{Autorità di Scrutinio}: Si occupa del calcolo finale dei risultati dell'elezione, partendo dai dati registrati dal Voting Server.
+        Il suo obiettivo è eseguire il conteggio secondo le regole dell'elezione, pubblicando un risultato finale che sia verificabile da tutti.\\ 
+        Quest'entità conosce solo i voti presenti all'interno del registro permettendone dunque lo scrutinio, ma non deve conoscere le identità degli elettori, impedendo
+        quindi l'associazione diretta voto-elettore.
+    \end{itemize}
+
+\section{Threat Models}
+In questa sezione verranno identificate le entità atte a compromettere il corretto funzionamento del sistema.
+Per ogni threat model verrà identificato lo scopo, le sue risorse computazionali e il modello che attua.
+    
+\begin{enumerate}
+    \item TM1
+    \item TM2
+    \item TM3
+    \item TM4
+    \item TM5 
+\end{enumerate}
+
+\end{document}
