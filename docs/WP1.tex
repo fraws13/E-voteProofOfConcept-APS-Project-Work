@@ -62,52 +62,339 @@
 \section{Attori principali}
 
     Gli attori principali coinvolti nel sistema sono:
+\begin{itemize}
 
-    \begin{itemize}
-        \item \textbf{Voting Client}: Interfaccia applicativa accessibile via browser 
-        dall'utente elettore.\\
-        In particolare, dopo aver effettuato l'autenticazione
-        e ricevuta l'autorizzazione per esercitare il voto, L'applicativo permette al votante di 
-        accedere al servizio, permettendo la compilazione della scheda, l'invio del voto 
-        e la visualizzazione di una conferma di voto.\\
-        Il Client conosce l'esito del flusso di autenticazione e autorizzazione e la preferenza selezionata dall'elettore;
-        Non deve conoscere la vera identità dell'elettore per associarla al suo voto e informazioni di autorizzazione e autenticazione dell'utente.
-        \item \textbf{Identity Service Provider (ISP)}: Servizio terzo all'applicativo che permette la verifica
-        dell'identità di ogni potenziale elettore. L'obiettivo di questo servizio è unicamente quello di verificare
-        che l'utente che richiede accesso al servizio di voto sia effettivamente il soggetto dichiarato. \\
-        L'ISP non gestisce il voto, non decide autonomamente se l'utente può partecipare all'elezione e non conosce
-        la preferenza espressa, ma si occupa solo quindi di verificarne l'identità.
-        \item \textbf{Elettore Onesto}: Persona fisica avente diritto al voto che esprime una sola preferenza valida.\\
-        Il suo obiettivo è quello di autenticarsi correttamente, ottenere l'autorizzazione al voto ed esprimere una preferenza di voto.
-        L'elettore onesto una volta inviata la tessera elettorale non ripudia la scelta fatta. 
-        \item \textbf{Government Authority}: è l'entità che si occupa di verificare l'idoneità alla partecipazione all'elezione per un potenziale elettore onesto,
-        dopo che ha effettuato l'autenticazione per mezzo dell'Identity Service Provider. \\
-        L'obiettivo di questa entità è quello di garantire la partecipazione all'elezione solo agli elettori legittimi e rilasciare per ogni elettore 
-        un'autorizzazione che gli permetterà di esercitare il voto.\\
-        Quest'entità deve conoscere l'esito dell'autenticazione, la sua identità reale e lo stato di autorizzazione al voto, 
-        ma non deve conoscere la sua preferenza espressa al voto.
-        \item \textbf{Voting Server}: è l'entità incaricata al ricevimento delle schede elettorali dagli elettori autorizzati al voto
-        che hanno esercitato il loro diritto al voto e registrare la preferenza di ognuno su un database.\\ Il Voting server deve consentire
-        la registrazione dei soli voti provenienti dai soggetti autorizzati, impedire voti duplicati e garantire un meccanismo di non repudio
-        per i voti espressi, impedendo quindi che i voti possano essere modificati o rimossi.\\
-        Quest'entità non dovrebbe conoscere la vera identità dell'elettore onesto, ma solo le informazioni utili a stabilire che il voto proviene
-        da un soggetto autorizzato.
-        \item \textbf{Autorità di Scrutinio}: Si occupa del calcolo finale dei risultati dell'elezione, partendo dai dati registrati dal Voting Server.
-        Il suo obiettivo è eseguire il conteggio secondo le regole dell'elezione, pubblicando un risultato finale che sia verificabile da tutti.\\ 
-        Quest'entità conosce solo i voti presenti all'interno del registro permettendone dunque lo scrutinio, ma non deve conoscere le identità degli elettori, impedendo
-        quindi l'associazione diretta voto-elettore.
-    \end{itemize}
+    \item \textbf{Voting Client}:\\
+    \textbf{Descrizione}: interfaccia applicativa accessibile dall'utente elettore. 
+    In particolare, dopo aver effettuato l'autenticazione e ricevuta l'autorizzazione per esercitare il voto, l'applicativo permette al votante di accedere al servizio.\\
+    \textbf{Obiettivo}: permettere la compilazione della scheda, l'invio del voto e la visualizzazione di una conferma di voto.\\
+    \textbf{Conoscenza}: il Client conosce l'esito del flusso di autenticazione e autorizzazione e la preferenza selezionata dall'elettore. 
+    Non deve conoscere la vera identità dell'elettore per associarla al suo voto e non deve conservare informazioni di autenticazione e autorizzazione oltre quanto necessario.
 
+    \item \textbf{Identity Service Provider (ISP)}:\\
+    \textbf{Descrizione}: servizio terzo all'applicativo che permette la verifica dell'identità di ogni potenziale elettore.\\
+    \textbf{Obiettivo}: verificare che l'utente che richiede accesso al servizio di voto sia effettivamente il soggetto dichiarato.\\
+    \textbf{Conoscenza}: l'ISP conosce l'identità reale dell'utente durante la fase di autenticazione. 
+    Non gestisce il voto, non decide autonomamente se l'utente può partecipare all'elezione e non conosce la preferenza espressa.
+
+    \item \textbf{Elettore Onesto}:\\
+    \textbf{Descrizione}: persona fisica avente diritto al voto che esprime una sola preferenza valida.\\
+    \textbf{Obiettivo}: autenticarsi correttamente, ottenere l'autorizzazione al voto ed esprimere una preferenza di voto.\\
+    \textbf{Conoscenza}: l'elettore onesto conosce la propria identità reale e la propria preferenza di voto. 
+    Una volta inviata la scheda elettorale, non tenta di votare più volte, non ripudia la scelta fatta e non cerca di alterare il corretto funzionamento del sistema.
+
+    \item \textbf{Government Authority}:\\
+    \textbf{Descrizione}: è l'entità che si occupa di verificare l'idoneità alla partecipazione all'elezione per un potenziale elettore onesto, dopo che ha effettuato l'autenticazione per mezzo dell'Identity Service Provider.\\
+    \textbf{Obiettivo}: garantire la partecipazione all'elezione solo agli elettori legittimi e rilasciare per ogni elettore un'autorizzazione che gli permetterà di esercitare il voto.\\
+    \textbf{Conoscenza}: quest'entità deve conoscere l'esito dell'autenticazione, l'identità reale dell'elettore e lo stato di autorizzazione al voto, ma non deve conoscere la sua preferenza espressa al voto.
+
+    \item \textbf{Voting Server}:\\
+    \textbf{Descrizione}: è l'entità incaricata di ricevere le schede elettorali dagli elettori autorizzati e di verificare che ciascun voto provenga da un soggetto abilitato.\\
+    \textbf{Obiettivo}: controllare la validità dell'autorizzazione al voto, impedire l'utilizzo duplicato della stessa credenziale e accettare soltanto voti conformi alle regole dell'elezione. 
+    Una volta validato il voto, il Voting Server lo inoltra al Registro Elettorale per la sua registrazione in forma verificabile.\\
+    \textbf{Conoscenza}: il Voting Server non dovrebbe conoscere la vera identità dell'elettore, ma soltanto le informazioni necessarie a stabilire che il voto proviene da un soggetto autorizzato. 
+    Inoltre, non dovrebbe conoscere la preferenza in chiaro, ma gestire soltanto una rappresentazione protetta del voto, ad esempio un voto cifrato.
+
+    \item \textbf{Registro Elettorale}:\\
+    \textbf{Descrizione}: è l'entità logica incaricata di conservare i voti validamente accettati dal Voting Server e di renderli pubblicamente verificabili. 
+    Nel modello proposto, il Registro Elettorale rappresenta un registro append-only, cioè una struttura in cui i voti registrati non possono essere modificati, rimossi o sostituiti senza che tale alterazione risulti rilevabile.\\
+    \textbf{Obiettivo}: supportare la verificabilità individuale e universale dell'elezione. 
+    In particolare, ogni elettore deve poter controllare che il proprio voto sia stato incluso nel registro, mentre osservatori esterni devono poter verificare che il risultato finale sia coerente con l'insieme dei voti registrati.\\
+    \textbf{Conoscenza}: il Registro Elettorale non deve conoscere l'identità reale degli elettori né la preferenza in chiaro, ma deve conservare solamente informazioni pubblicabili relative ai voti.
+
+    \item \textbf{Scrutiny Authority}:\\
+    \textbf{Descrizione}: si occupa del calcolo finale dei risultati dell'elezione partendo dai dati registrati nel Registro Elettorale.\\
+    \textbf{Obiettivo}: eseguire il conteggio secondo le regole dell'elezione, pubblicando un risultato finale che sia verificabile da tutti.\\
+    \textbf{Conoscenza}: quest'entità conosce solo i voti presenti all'interno del registro permettendone dunque lo scrutinio, ma non deve conoscere le identità degli elettori, impedendo quindi l'associazione diretta voto-elettore.
+
+\end{itemize}
+\section{Assunzioni di fiducia}
+Il sistema viene modellato separando ogni responsabilità e delegandola ad un entità apposita. Tuttavia ciò non garantisce che ogni entità si comporti in modo onesto.
+Per garantire che gli attori principali operino come parti oneste, è doveroso fare delle assunzioni sulla loro affidabilità e comportamento; in particolare:\\
+    
+\begin{itemize}
+    \item \textbf{Voting Client}: Per essere considerata parte fidata, si assume che mostri all'utente solo le opzioni disponibili durante la compilazione della scheda elettorale, Assumendo che il voto sia trasmesso secondo il flusso previsto dal sistema.\\
+    Il Voting Client tuttavia non viene considerato come parte pienamente fidata; Essendo una componente eseguita sul disposiivo dell'utente, può essere esposto
+    a compromissioni locali.\\
+    Il rischio residuo è che un client compromesso possa osservare la preferenza selezionata e modificarla prima dell'invio, oppure conservare informazioni utili ad associare identità, autorizzazione e voto.
+    \item \textbf{Identity Service Provider}: 
+    Si assume che l'Identity Service Provider sia un servizio di identità esterno e qualificato, come SPID, CIE o un servizio equivalente, già riconosciuto come affidabile per l'identificazione digitale degli utenti. 
+    Nel modello proposto, l'ISP è quindi fidato esclusivamente per autenticare correttamente l'identità reale dell'utente e per comunicare alla Government Authority un esito di autenticazione corretto, riferito al soggetto che chiede l'autenticazione.\\
+    Questa assunzione risulta necessaria in quanto il sistema delega l'autenticazione ad un'infrastruttura esterna adatta a questo scopo,
+    Il rischio residuo è tuttavia legato alla potenziale compromissione di questo servizio, che potrebbe quindi autenticare utenti non legittimi e/o negare l'accesso a utenti legittimi. Inoltre,
+    in caso di collusione, un ISP compromesso potrebbe correlare l'identità reale dell'utente ad operazioni successive. In questo scenario però , il rischio che un ISP compromesso possa invalidare il processo di autenticazione non viene contemplato, 
+    perchè aggiungerebbe ulteriore complessità al modello
+    \item \textbf{Government Authority}:
+    Come parte onesta, si assume che quest'entità verifichi correttamente l'idoneità di ogni potenziale elettore, rilasciando un'autorizzazione solo ad elettori legittimi.\\
+    Tuttavia un possibile rischio residuo è caratterizzato da una Government Authority disonesta, che può rilasciare autorizzazioni indebite e/o negarle ad elettori legittimi.\\
+    Questo rischio non può essere mitigato, in quanto per il rilascio di un'autorizzazione, la Government Authority deve conoscere necessariamente l'identità dell'elettore.\\
+    Un altro possibile rischio è quello dell'associazione temporale tra autorizzazione rilasciata e voto. Tuttavia questo rischio viene mitigato parzialmente attraverso la separazione delle fasi di autorizzazione e voto.
+    \item \textbf{Voting Server}:Si assume che il voting server verifichi correttamente la validità di ogni voto ricevuto, per garantire unicità del voto e la corretta raccolta delle schede.\\
+    Questa entità non viene considerata come pienamente fidata rispetto alla segretezza del voto: infatti nel modello proposto non dovrebbe conoscere la vera identità dell'elettore
+    Infine, nel modello proposto, si assume che nessuna componente sia completamente fidata, in quanto può essere comunque soggetta a manipolazioni interne, che verranno discusse nei Threat Model. Tuttavia la separazione strutturale tra le componenti serve proprio ad impedire che una singola entità
+    possa associare identità reale e preferenze espresse.\\
+    Infine, si assume che non vi sia una collusione totale tra tutte le componenti principali del sistema. In particolare, una collusione tra Government Authority, Voting Server e Scrutiny Authority potrebbe
+    compromettere lo pseudoanonimato del voto, in quanto permetterebbe il collegamento tra identità, autorizzazione e scheda di voto registrata.\\
+    Questa assunzione è doverosa in quanto è un limite strutturale del modello proposto, che non garantisce quindi segretezza assoluta nel caso in cui più entità condividano intenzionalmente le informazioni.
+\end{itemize}
 \section{Threat Models}
 In questa sezione verranno identificate le entità atte a compromettere il corretto funzionamento del sistema.
-Per ogni threat model verrà identificato lo scopo, le sue risorse computazionali e il modello che attua.
-    
-\begin{enumerate}
-    \item TM1
-    \item TM2
-    \item TM3
-    \item TM4
-    \item TM5 
-\end{enumerate}
+Per ogni Threat Model, verranno elencate le sue finalità, le metodologie con cui potrà attaccare l'infrastruttura e le capacità/risorse computazionali con cui performerà le operazioni.
+
+\subsection{Elettore disonesto}
+
+Il modello è identificato in un elettore che, seppur seguendo il protocollo di voto scelto, cerca di trarre vantaggio da criticità scoperte nel sistema di voto, ad esempio volendo esercitare il suo voto più di una volta, modificare la scelta fatta o ripudiarla.
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Violazione dell'Unicità}: L'elettore disonesto tenta l'espressione di voti multipli per alterare il peso statistico della propria preferenza.
+
+    \item \textbf{Delegittimazione del Processo}: Sfruttare il ripudio sul voto espresso per creare un'apparenza di corruzione nel sistema, inducendo dubbi sulla correttezza del conteggio finale.
+
+    \item \textbf{Collusione o Vendita del Voto}: Dimostrare a terzi la preferenza espressa, in scenari di coercizione o voto di scambio, violando deliberatamente lo pseudoanonimato del proprio voto.
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Replay di autorizzazione}: Sfruttamento della procedura di ottenimento delle credenziali di voto per riutilizzare una credenziale già valida, al fine di esercitare il voto più di una volta, violando quindi l'unicità del voto.
+
+    \item \textbf{Uso improprio di identità o credenziali di terzi}: Utilizzare credenziali cedute volontariamente da familiari, conoscenti o altri elettori per controllare più votazioni. In questo caso l'attacco non mira necessariamente a violare la crittografia del sistema, ma a sfruttare la debolezza del contesto remoto e non presidiato, al fine di aumentare la rilevanza statistica della preferenza espressa.
+
+    \item \textbf{Repudiation Attack / Ripudio Fraudolento}: Disconoscimento formale di un voto correttamente inviato e registrato, sostenendo che l'identità sia stata sottratta o che il sistema abbia fallito la registrazione del voto, al fine di forzare il rilascio di una nuova credenziale di voto e di annullare quella inviata.
+
+    \item \textbf{Proof of vote}: Tentativo di avere una prova ufficiale del voto espresso, salvando eventuali ricevute o prove di voto, al fine di convincere terzi del voto espresso e quindi favorire coercizione o corruzione nel contesto di scambio di voti.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Accesso alle risorse di base}: Ha accesso alle proprie credenziali di voto e al proprio dispositivo, come smartphone o computer.
+
+    \item \textbf{Multi-identità}: Disponibilità di ulteriori identità valide al voto che rendono l'attacco indistinguibile, a livello di rete, da un'operazione lecita.
+
+    \item \textbf{Livello di conoscenza}: Comprensione dettagliata dei flussi di autenticazione tra Ministero e Client.
+\end{itemize}
+
+\subsection{Insider all'interno del Voting Server / Avversario interno privilegiato}
+
+Si tratta di un avversario attivo operante all'interno della logica del Voting Server. L'entità, che può essere un amministratore di sistema con privilegi elevati, agisce intenzionalmente per manipolare la corretta verificabilità dei voti da parte del Voting Server, alterando quindi il processo di controllo di duplicati e/o invio di voti leciti al Registro Elettorale.
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Alterazione del metodo di verifica dei voti}: Un insider malevolo potrebbe con i suoi permessi di amministrazione accettare un voto che a priori per le regole stabilite non può essere ritenuto valido, oppure rifiutare un voto che dovrebbe invece essere valido, alterando quindi l'autenticità, unicità e integrità del voto ed erodendo la credibilità del sistema elettorale.
+
+    \item \textbf{Accettazione di duplicati}: L'avversario potrebbe permettere al Voting Server di accettare più voti associati alla stessa autorizzazione o credenziale di voto, violando la proprietà di unicità del voto.
+
+    \item \textbf{Invio di schede di voto non valide}: Siccome il Voting Server ha come obiettivo quello di inviare i voti validi al Registro Elettorale, un insider potrebbe disabilitare i controlli su determinate schede non valide per consentire l'invio di queste schede non valide al Registro Elettorale, invalidando la correttezza del voto.
+
+    \item \textbf{Violazione della Segretezza}: Tentare di de-anonimizzare gli elettori associando l'identità reale alla preferenza espressa, spesso condividendo o vendendo tali dati a terzi.
+
+    \item \textbf{Compromissione delle Chiavi}: Sottrarre chiavi crittografiche sensibili utilizzate per certificare la validità.
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Data Correlation}: Analisi dei log di sistema e dei pacchetti ricevuti per correlare i timestamp e gli indirizzi IP dei votanti con le schede memorizzate nel database.
+
+    \item \textbf{Manomissione del Software}: Modifica del codice sorgente del server di voto per intercettare informazioni sensibili delle schede in chiaro, se non adeguatamente cifrate end-to-end, rifiutare voti validi o validare voti illeciti.
+
+    \item \textbf{Omissione Selettiva}: Cancellazione mirata di schede appartenenti a determinati gruppi di elettori.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Accesso Privilegiato}: Pieni permessi di amministrazione del server di voto, avendo accesso alla logica di validazione e ai record del server.
+
+    \item \textbf{Capacità Operativa}: Potere di manipolare direttamente i record del database e i log del server.
+
+    \item \textbf{Potenza Computazionale}: Disponibilità delle elevate risorse di calcolo e di storage del Voting Server per eseguire analisi di massa sui dati cifrati.
+\end{itemize}
+
+Si assume che l'avversario non sia in grado di rompere le primitive crittografiche correttamente implementate. La forza dell'avversario deriva principalmente dall'accesso al Voting Server e dalla possibilità di alterarne la logica interna di validazione.
+
+\subsection{Voting Client compromesso o disonesto}
+
+L'avversario è configurato come un'entità esterna al modello che tenta di distribuire un software malevolo di voto all'elettore onesto simulando fedelmente l'applicazione ufficiale, compromettendo la fase iniziale di espressione della preferenza, o che cerca di manipolare l'applicativo ufficiale. Essendo il client il mezzo con cui l'elettore interagisce per la compilazione della scheda di voto, un eventuale software compromesso potrebbe osservare la preferenza selezionata prima che essa venga trasmessa al sistema.
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Impersonificazione e Voto Fraudolento}: Il software riesce ad ottenere le informazioni di autenticazione per esprimere un voto al posto dell'elettore legittimo, violando la proprietà di Autenticità.
+
+    \item \textbf{Alterazione della preferenza di voto}: Il client malevolo potrebbe mostrare all'elettore onesto la preferenza selezionata dall'elettore, ma inviare successivamente al Voting Server una preferenza diversa e/o annullarne la trasmissione al Voting Server.
+
+    \item \textbf{Violazione dello pseudonimato}: Il client potrebbe cercare di collegare autenticazione dell'utente reale e preferenza espressa, violando quindi lo pseudonimato.
+
+    \item \textbf{Facilitazione della Coercizione}: Il client malevolo potrebbe salvare i dati della scheda elettorale e della preferenza di voto, inducendo l'elettore a modificare la sua scelta per conto di entità terze, favorendo coercizione.
+
+    \item \textbf{Manipolazione della Verificabilità Individuale}: Impedire all'elettore di accorgersi che il proprio voto è stato alterato o soppresso, fornendo una ricevuta visiva falsa che non corrisponde a quanto effettivamente inviato al server.
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Phishing}: Diffusione di link o eseguibili tramite canali non ufficiali, come email, SMS o social, per indurre l'utente a utilizzare l'interfaccia malevola. In questo modo, quando l'elettore onesto utilizzerà l'applicativo non ufficiale, fornirà i suoi dati sensibili al software malevolo.
+
+    \item \textbf{Conservazione delle informazioni sensibili}: Il client memorizza localmente token, identificativi, ricevute e preferenze per ricostruire il legame tra elettore e voto.
+
+    \item \textbf{Fake Interface}: Creazione di un portale web o di un'applicazione speculare a quella legittima per ingannare l'utente nella fase di inserimento delle credenziali.
+
+    \item \textbf{Credential/Token Forwarding}: Una volta ottenute le credenziali o il token di voto, il client malevolo inoltra queste informazioni alle autorità reali in tempo reale per ottenere i certificati di voto, rendendo l'attacco trasparente all'utente.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Controllo del dispositivo}: L'avversario può controllare totalmente o parzialmente l'ambiente in cui viene eseguito il Voting Client, ad esempio iniettando malware o tramite il client modificato.
+
+    \item \textbf{Ingegneria Sociale e Web Hosting}: Capacità di orchestrare campagne di comunicazione efficaci per l'invio di link malevoli e gestire infrastrutture di hosting per domini malevoli, come cybersquatting o typosquatting.
+
+    \item \textbf{Manipolazione Front-end}: Competenza avanzata nella manipolazione dell'interfaccia utente e dell'esperienza utente per rendere indistinguibile il client falso da quello autentico.
+
+    \item \textbf{Capacità computazionale elevata}: Possesso di uno o più server in grado di eseguire script o algoritmi complessi in poco tempo.
+
+    \item \textbf{Analisi dei Protocolli}: Conoscenza del flusso di comunicazione tra Client, Ministero e Server per intercettare e reinviare correttamente i messaggi di autorizzazione.
+
+    \item \textbf{Accesso a dati temporanei}: L'avversario può accedere a token, messaggi, conferme o altri dati gestiti localmente durante il protocollo.
+\end{itemize}
+
+\subsection{Attaccante esterno}
+
+Si definisce come un'entità esterna che non possiede privilegi di accesso diretto alle infrastrutture fisiche o logiche del modello, 
+ma opera attivamente o passivamente sui canali di comunicazione che collegano gli attori del sistema, cioè Elettore, Ministero e Voting Server.
+
+Può essere definita come:
+
+\begin{itemize}
+    \item \textbf{Attaccante passivo}: Un'entità che monitora i canali di comunicazione senza alterare il flusso dei dati o interagire direttamente con i componenti del sistema.
+
+    \item \textbf{Attaccante attivo}: Un avversario che interviene direttamente sulla componente comunicativa, alterando, iniettando, ritardando o eliminando i messaggi scambiati tra le parti oneste, deviando attivamente dal protocollo.
+\end{itemize}
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Compromissione dello Pseudo Anonimato}: Correlare l'identità reale dell'elettore alla preferenza espressa tramite l'analisi dei flussi comunicativi tra gli attori del sistema. 
+
+    \item \textbf{Violazione dell'Integrità e dell'Unicità}: Tentare di alterare il conteggio o inserire voti multipli fraudolenti. 
+
+    \item \textbf{Attacco alla Disponibilità e alla Legittimità}: Impedire il corretto svolgimento delle operazioni di voto per determinate fasce di elettori o per l'intera infrastruttura, inducendo gli elettori alla contestazione o al ripudio del voto. 
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Replay Attack}: Intercettazione delle credenziali degli utenti o del contenuto dei payload, con l'intento di utilizzarli in contesti fraudolenti per violare il vincolo del voto unico.
+
+    \item \textbf{Attacchi Denial-of-Service (DoS)}: Rendere indisponibili le parti oneste del sistema, ad esempio sovraccaricando i server.
+
+    \item \textbf{Man-in-the-Middle (MitM)}: Intercettazione di credenziali o token di autenticazione durante la comunicazione tra il votante lecito e le entità oneste del sistema; l'attaccante può bloccare, effettuando un attacco alla disponibilità, o alterare il contenuto del payload per minare alla legittimità.
+
+    \item \textbf{Eavesdropping e Analisi del Traffico}: Monitoraggio passivo del traffico tra l'utente e le autorità per estrarre dati atti a identificare pattern comportamentali e dati sensibili violando così la segretezza.
+
+    \item \textbf{Sabotaggio della Fiducia}: Sfruttamento di bug minori, latenze o inefficienza di sistema per amplificare dubbi sulla sicurezza, spingendo gli utenti a dichiarare falsamente che il proprio voto è stato manipolato e spingendo al ripudio del voto a quest'ultimi.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Capacità Computazionali}: Esse possono variare dipendentemente dall'organizzazione che genera questo tipo di attacchi. L'attaccante può avere accesso a più dispositivi per eseguire analisi massive di dati in transito su canali non protetti o eseguire attacchi DoS compromettendo il funzionamento dei server.
+
+    \item \textbf{Capacità di intercettazione}: Capacità di intercettazione su canali non protetti.
+\end{itemize}
+
+\subsection{Government Authority Disonesta}
+
+L'avversario si configura come l'opposto della parte onesta rappresentata dalla Government Authority, cioè l'entità che è incaricata di verificare l'idoneità dell'elettore e di rilasciare un'autorizzazione valida al voto. Nel modello proposto, questa entità occupa una posizione critica perché conosce l'entità reale dell'elettore e il suo stato di abilitazione al voto. Configurandosi come disonesta, questa entità ha come obiettivo quello di alterare il processo di autorizzazione, rilasciando credenziali indebite, negandole ad elettori legittimi o conservando informazioni utili per correlare identità e successive fasi di partecipazione al voto. La separazione tra le entità discussa precedentemente riduce il rischio di correlazione tra i dati di ogni singolo elettore onesto, tuttavia non esclude il rischio che l'autorità che dovrebbe verificare l'autorizzazione al voto possa comportarsi maliziosamente abusando dei propri poteri.
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Rilascio di autorizzazioni indebite}: Può rilasciare credenziali o token di voto a soggetti non aventi diritto, consentendo la partecipazione illegittima all'elezione.
+
+    \item \textbf{Negazione di autorizzazioni valide}: Revoca dell'autorizzazione al voto per specifici elettori legittimi, impedendo loro di esercitare il diritto di voto e compromettendo quindi la correttezza del processo elettorale.
+
+    \item \textbf{Collegamento identità-voto}: Avendo accesso diretto all'identità di ogni elettore per poterne verificare l'idoneità al voto, potrebbe conservare informazioni dettagliate su ogni elettore, favorendo quindi la creazione di un collegamento tra l'identità reale dell'elettore e la successiva operazione di voto.
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Manipolazione del registro aventi diritto}: Marcando ad esempio come non idoneo un elettore legittimo o come idoneo un soggetto non autorizzato.
+
+    \item \textbf{Emissione fraudolenta di autorizzazioni}: Rilascio intenzionale di token o credenziali di voto non giustificate da una corretta autenticazione e verifica di idoneità.
+
+    \item \textbf{Emissione multipla per lo stesso elettore}: Rilascio di più autorizzazioni per una stessa identità reale, violando la proprietà di unicità.
+
+    \item \textbf{Collusione con altre componenti}: Condivisione intenzionale di dati con altre entità, al fine di facilitare la correlazione tra identità e voto registrato.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Accesso al registro degli aventi diritto al voto}: Possibilità di modificare e leggere lo stato degli elettori ammessi alla votazione.
+
+    \item \textbf{Controllo fase di autorizzazione}: Capacità di revocare, negare, rilasciare o duplicare autorizzazioni di voto.
+
+    \item \textbf{Conoscenza dell'identità degli elettori}: Accesso ai dati identificativi degli elettori autenticati tramite Identity Service Provider.
+
+    \item \textbf{Accesso a log di autorizzazione}: Disponibilità di informazioni temporali relative alle richieste di autorizzazione.
+\end{itemize}
+
+\textit{È doveroso inoltre precisare che non si assume che la Government Authority malevola sia in grado di rompere primitive crittografiche implementate correttamente. La sua forza deriva unicamente dal ruolo istituzionale e operativo che ricopre, potendo controllare la decisione su chi può ricevere diritto al voto e conoscere l'identità degli elettori.}
+
+\subsection{Scrutiny Authority compromessa o disonesta}
+
+Si definisce come un avversario interno che corrompe il corretto funzionamento dell'autorità di scrutinio oppure come una Scrutiny Authority stessa malevola. Tale entità gode di privilegi elevati nella fase finale dell'elezione,
+poiché il suo compito onesto è calcolare l'esito finale a partire dai voti presenti nel Registro Elettorale e pubblicare un risultato verificabile.
+
+Nel modello proposto, la Scrutiny Authority non dovrebbe conoscere l'identità reale degli elettori, né dovrebbe modificare l'insieme dei voti registrati. Tuttavia, se compromessa o disonesta, può tentare di alterare la correttezza dello scrutinio, pubblicare un risultato non coerente con i voti registrati oppure collaborare con altre componenti per indebolire la segretezza del voto.
+
+\subsubsection*{Finalità}
+
+\begin{itemize}
+    \item \textbf{Falsificazione del conteggio}: Pubblicare un risultato finale diverso da quello ottenibile applicando correttamente le regole di scrutinio ai voti presenti nel Registro Elettorale.
+
+    \item \textbf{Omissione selettiva di voti registrati}: Escludere dal conteggio voti regolarmente presenti nel Registro Elettorale, con l'obiettivo di alterare l'esito finale.
+
+    \item \textbf{Delegittimazione del processo}: Pubblicare risultati incompleti, incoerenti o non verificabili, inducendo dubbi sulla correttezza della procedura elettorale.
+
+    \item \textbf{Violazione della segretezza}: Tentare di ricavare informazioni sulle preferenze individuali durante la fase di scrutinio, soprattutto in caso di accesso a dati ausiliari o collusione con altre componenti del sistema.
+
+    \item \textbf{Collusione per la de-anonimizzazione}: Collaborare con Government Authority, Voting Server o Registro Elettorale per tentare di collegare identità reale, autorizzazione e scheda registrata.
+\end{itemize}
+
+\subsubsection*{Metodologie di Attacco}
+
+\begin{itemize}
+    \item \textbf{Conteggio scorretto}: Applicazione intenzionalmente errata delle regole di scrutinio previste per il referendum binario.
+
+    \item \textbf{Esclusione selettiva}: Mancato conteggio di alcune schede presenti nel Registro Elettorale.
+
+    \item \textbf{Pubblicazione fraudolenta del risultato}: Pubblicazione di un risultato finale non coerente con l'insieme dei voti registrati.
+
+    \item \textbf{Falsificazione o omissione delle informazioni di verifica}: Mancata pubblicazione delle informazioni necessarie a consentire la verifica universale del risultato.
+
+    \item \textbf{Collusione con altre entità}: Condivisione di informazioni con altre componenti del sistema per tentare la correlazione tra elettori e schede.
+\end{itemize}
+
+\subsubsection*{Risorse e Capacità}
+
+\begin{itemize}
+    \item \textbf{Accesso ai dati di scrutinio}: Disponibilità dei voti presenti nel Registro Elettorale necessari per il calcolo del risultato finale.
+
+    \item \textbf{Controllo della procedura di conteggio}: Capacità di influenzare o manipolare il calcolo dell'esito elettorale.
+
+    \item \textbf{Controllo sulla pubblicazione del risultato}: Capacità di pubblicare risultati finali, risultati parziali o informazioni di verifica non coerenti con i voti registrati.
+
+    \item \textbf{Capacità di collusione}: Possibilità di condividere dati o metadati con altre componenti del sistema, al fine di compromettere pseudoanonimato, segretezza o trasparenza.
+\end{itemize}
+
+Si assume che la Scrutiny Authority compromessa non possa modificare direttamente l'elenco degli aventi diritto o rilasciare autorizzazioni di voto, poiché tali funzioni appartengono alla Government Authority. Inoltre, non si assume che possa rompere primitive crittografiche correttamente implementate. La sua forza deriva dal controllo sulla fase di conteggio e dalla possibilità di pubblicare un risultato finale scorretto o non sufficientemente verificabile.
 
 \end{document}
