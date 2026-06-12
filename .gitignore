@@ -15,7 +15,6 @@
 *.nav
 *.snm
 *.vrb
-*.tex
 
 # File compilati vari
 *.dvi

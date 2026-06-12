@@ -1,0 +1,433 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{etoolbox}
+\usepackage{xurl}
+\usepackage{hyperref}
+
+\geometry{top=2.5cm,bottom=2.7cm,left=2.6cm,right=2.6cm,headheight=16pt}
+
+\definecolor{MainBlue}{HTML}{1F4E79}
+\definecolor{AccentBlue}{HTML}{D9EAF7}
+\definecolor{HeaderBlue}{HTML}{EAF2F8}
+\definecolor{RuleGray}{HTML}{B7C9D6}
+\definecolor{SoftGray}{HTML}{F6F8FA}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=MainBlue,
+    urlcolor=MainBlue,
+    citecolor=MainBlue,
+    pdftitle={WP3 - Analisi di sicurezza},
+    pdfauthor={Gennaro Foschillo, Francesco Vittorio Allocca}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.62em}
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{7pt}
+\arrayrulecolor{RuleGray}
+\setlength{\arrayrulewidth}{0.45pt}
+\setlist[itemize]{topsep=0.25em,itemsep=0.2em,leftmargin=1.8em}
+\setlist[enumerate]{topsep=0.25em,itemsep=0.2em,leftmargin=2em}
+\AtBeginEnvironment{longtable}{\small}
+
+\titleformat{\section}
+  {\Large\bfseries\color{MainBlue}}
+  {\thesection}{0.8em}{}
+  [\vspace{0.15em}\titlerule]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{MainBlue}}
+  {\thesubsection}{0.8em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{MainBlue}}
+  {\thesubsubsection}{0.7em}{}
+
+\titlespacing*{\section}{0pt}{1.2em}{0.8em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.45em}
+\titlespacing*{\subsubsection}{0pt}{0.9em}{0.25em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Algoritmi e Protocolli per la Sicurezza}
+\rhead{\small WP3 - Analisi di sicurezza}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\begin{document}
+
+\pagenumbering{roman}
+\begin{titlepage}
+    \centering
+    \vspace*{1.7cm}
+    {\Large\color{MainBlue}\textbf{Algoritmi e Protocolli per la Sicurezza}\\[0.4cm]}
+    {\Huge\bfseries Project Work\\[0.25cm]}
+    {\LARGE\bfseries WP3: Analisi di sicurezza\\[0.6cm]}
+    \textcolor{MainBlue}{\rule{0.82\textwidth}{1.2pt}}\\[1.0cm]
+    {\large Analisi critica del protocollo di voto elettronico proposto nel WP2}\\[2.2cm]
+    \begin{tabular}{rl}
+        \textbf{Autori:} & Gennaro Foschillo \\
+                         & Francesco Vittorio Allocca \\
+    \end{tabular}
+    \vfill
+    {\large A.A. 2025--2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+\section{WP3: Analisi di sicurezza}
+
+\subsection{Obiettivo del Work Package}
+
+Questo Work Package analizza la sicurezza della soluzione proposta nel WP2 rispetto al modello definito nel WP1.
+L'obiettivo non \`e dimostrare in modo formale e assoluto la sicurezza del sistema, ma valutare in modo critico quali propriet\`a risultano supportate dal protocollo, sotto quali assunzioni, e quali rischi residui rimangono.
+
+L'analisi considera il protocollo per un referendum binario, basato sulla separazione tra autenticazione, autorizzazione, raccolta della scheda, registrazione pubblica e scrutinio finale.
+Le propriet\`a analizzate sono autenticit\`a, unicit\`a, segretezza del voto, pseudoanonimato, integrit\`a, verificabilit\`a individuale, verificabilit\`a universale ed efficienza.
+
+Nel seguito le propriet\`a non vengono trattate come tutte garantite allo stesso livello.
+Alcune sono supportate direttamente dai meccanismi del protocollo, altre sono mitigate solo sotto specifiche assunzioni, mentre alcune rimangono rischi residui o fuori dallo scope della soluzione proposta.
+
+\subsection{Metodo di analisi}
+
+L'analisi viene svolta confrontando, per ciascuna propriet\`a di sicurezza:
+
+\begin{itemize}
+    \item l'obiettivo dichiarato nel modello del WP1;
+    \item i meccanismi introdotti nel protocollo del WP2;
+    \item le assunzioni necessarie affinch\'e tali meccanismi siano efficaci;
+    \item gli scenari di attacco che il protocollo mitiga;
+    \item i limiti residui che non vengono eliminati dalla soluzione proposta.
+\end{itemize}
+
+Si assume che le primitive crittografiche utilizzate siano implementate correttamente e che gli algoritmi adottati siano sicuri rispetto ad avversari computazionalmente limitati.
+In particolare, l'analisi si basa su firme digitali non falsificabili, funzioni hash resistenti alle collisioni, cifratura asimmetrica probabilistica per la scheda, canali sicuri autenticati e strutture Merkle-based per la verificabilit\`a di inclusione.
+
+\subsection{Assunzioni di sicurezza considerate}
+
+Le propriet\`a del protocollo dipendono da alcune assunzioni operative e crittografiche.
+Queste assunzioni non eliminano i rischi, ma delimitano il contesto in cui la soluzione viene valutata.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.30\textwidth}|>{\raggedright\arraybackslash}p{0.60\textwidth}|}
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Assunzione} & \textbf{Descrizione} \\
+    \hline
+    \endfirsthead
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Assunzione} & \textbf{Descrizione} \\
+    \hline
+    \endhead
+    Primitive crittografiche sicure & Le firme digitali, gli hash, la cifratura probabilistica e i MAC usati nei canali sicuri sono considerati sicuri rispetto ad avversari efficienti. \\
+    \hline
+    Corretta gestione delle chiavi & Le chiavi private delle entit\`a infrastrutturali non devono essere divulgate. La compromissione di una chiave privata pu\`o invalidare le garanzie associate all'entit\`a corrispondente. \\
+    \hline
+    PKI e CRL disponibili & I certificati e le liste di revoca pubblicate dalla Government Authority devono essere recuperabili, firmati e aggiornati. Le entit\`a devono rifiutare certificati scaduti o revocati. \\
+    \hline
+    Voting Client non pienamente fidato & Il client pu\`o essere compromesso o eseguito su un dispositivo non sicuro. Il protocollo mitiga questo rischio, ma non garantisce pienamente che la preferenza mostrata e quella cifrata coincidano. \\
+    \hline
+    Separazione delle responsabilit\`a & La soluzione assume che le entit\`a non colludano tutte tra loro. La separazione tra GA, VS, ER e SA riduce il rischio di associazione identit\`a-voto, ma non elimina il rischio in caso di collusione estesa. \\
+    \hline
+    Scrutiny Authority distribuita & Almeno \(k\) nodi della Scrutiny Authority devono autorizzare lo scrutinio finale. Questa scelta \`e una custodia/autorizzazione distribuita dell'uso di \(sk_{SA}\), non una threshold decryption matematica. \\
+    \hline
+    Sincronizzazione temporale ragionevole & Timestamp, finestre di validit\`a, CRL e chiusura delle urne richiedono una sincronizzazione temporale sufficiente tra le entit\`a. \\
+    \hline
+\end{longtable}
+
+\subsection{Classificazione delle propriet\`a}
+
+La tabella seguente riassume il livello con cui il protocollo supporta le propriet\`a dichiarate nel modello.
+La classificazione distingue tra propriet\`a supportate direttamente, propriet\`a mitigate sotto assunzioni e propriet\`a non pienamente garantite.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.20\textwidth}|>{\raggedright\arraybackslash}p{0.23\textwidth}|>{\raggedright\arraybackslash}p{0.27\textwidth}|>{\raggedright\arraybackslash}p{0.20\textwidth}|}
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Propriet\`a} & \textbf{Livello} & \textbf{Meccanismi principali} & \textbf{Limite principale} \\
+    \hline
+    \endfirsthead
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Propriet\`a} & \textbf{Livello} & \textbf{Meccanismi principali} & \textbf{Limite principale} \\
+    \hline
+    \endhead
+    Autenticit\`a & Supportata & Autenticazione presso GA, token firmato, certificati, firma con \(sk_U\) & Dipende da GA e dalla protezione di \(sk_U\). \\
+    \hline
+    Unicit\`a & Supportata & \(IssuedTokensDB\), \(SpentTokensDB\), stati \emph{pending}/\emph{committed} & Dipende dalla corretta emissione dei token e dallo stato del VS. \\
+    \hline
+    Segretezza & Mitigata & Cifratura probabilistica con \(pk_{SA}\), separazione VS/ER/SA & Non resiste a client compromesso o collusione critica. \\
+    \hline
+    Pseudoanonimato & Mitigato & Separazione identit\`a-token-voto, mancata pubblicazione del token & Possibile correlazione tramite log, timestamp o ordine dei record. \\
+    \hline
+    Integrit\`a & Supportata & Firme digitali, MAC/canale sicuro, hash, Merkle Tree & Dipende dalla validit\`a delle chiavi e dalla correttezza del registro. \\
+    \hline
+    Verificabilit\`a individuale & Supportata con limite & Ricevuta firmata, \(Leaf_i\), \(MerklePath_i^{final}\), \(Root_{final}\) & Verifica l'inclusione, non il fatto che il client abbia cifrato la scelta desiderata. \\
+    \hline
+    Verificabilit\`a universale & Supportata se il tally pubblica dati sufficienti & \(BB_{final}\), \(Root_{final}\), preferenze decifrate validate, firme SA & Aumenta il rischio residuo di correlazione con metadati esterni. \\
+    \hline
+    Efficienza & Vincolo progettuale soddisfatto & Referendum binario, hash, Merkle path logaritmico, chiavi di sessione & Non misura sperimentale in WP3; sar\`a valutata in WP4. \\
+    \hline
+    Coercion-resistance & Non garantita & Ricevuta non contiene la preferenza & Il voto remoto non presidiato resta vulnerabile a coercizione esterna. \\
+    \hline
+    Disponibilit\`a & Non garantita crittograficamente & Hard-fail su CRL, separazione dei ruoli & Mancano meccanismi specifici anti-DDoS o di fault tolerance. \\
+    \hline
+\end{longtable}
+
+\subsection{Analisi per propriet\`a}
+
+\subsubsection{Autenticit\`a dell'elettore e del voto}
+
+L'autenticit\`a richiede che soltanto elettori legittimi possano partecipare alla votazione.
+Nel protocollo, questa propriet\`a \`e supportata dalla separazione tra autenticazione presso la Government Authority e successivo rilascio del token di autorizzazione.
+
+La Government Authority autentica l'elettore e verifica la sua idoneit\`a.
+Solo in caso di esito positivo viene emesso un \(VotingToken_U\), contenente un permesso \(Permit_U\) firmato dalla GA.
+Il token contiene anche \(pk_U\), cio\`e la chiave pubblica associata all'elettore per la specifica elezione.
+Durante l'invio della scheda, il Voting Server verifica la firma della GA sul token e la firma \(\sigma_U^{Ballot}\) prodotta con \(sk_U\).
+
+Questa scelta impedisce a un soggetto che possiede solo il token, ma non la chiave privata corrispondente, di usarlo correttamente.
+La propriet\`a dipende dalla correttezza della GA, dalla non compromissione di \(sk_U\) e dalla corretta verifica dei certificati e delle firme.
+
+\subsubsection{Unicit\`a del voto}
+
+L'unicit\`a richiede che ciascun elettore possa contribuire al pi\`u con una scheda valida al risultato finale.
+Il protocollo affronta il problema in due punti distinti.
+
+In fase di autorizzazione, la Government Authority aggiorna \(IssuedTokensDB\), impedendo l'emissione di pi\`u token per lo stesso elettore nella medesima elezione.
+In fase di raccolta, il Voting Server controlla \(SpentTokensDB\), memorizzando un digest non invertibile del numero seriale del token.
+L'uso degli stati \emph{pending} e \emph{committed} evita che un token venga considerato definitivamente speso prima che il Registro Elettorale abbia confermato la pubblicazione della scheda.
+
+La garanzia ottenuta \`e quindi: per ogni token validamente emesso, al pi\`u una scheda pu\`o arrivare allo stato \emph{committed} ed essere associata a un record del Bulletin Board finale.
+La propriet\`a non elimina il rischio di comportamento malevolo della GA, che potrebbe emettere token indebiti o duplicati; tale rischio rientra nelle assunzioni di fiducia e va discusso come rischio residuo.
+
+\subsubsection{Segretezza della preferenza}
+
+La segretezza della preferenza viene garantita principalmente cifrando localmente il voto con la chiave pubblica elettorale della Scrutiny Authority:
+
+\[
+    EncVoto_{SA} = Enc^{prob}_{pk_{SA}}(v).
+\]
+
+La cifratura deve essere probabilistica, ad esempio tramite RSA-OAEP, perch\'e nel caso di referendum binario una cifratura deterministica produrrebbe lo stesso ciphertext per lo stesso valore di voto.
+Un osservatore del Bulletin Board potrebbe quindi raggruppare ciphertext uguali e ricavare informazioni statistiche sui voti.
+
+Il Voting Server e il Registro Elettorale non possiedono \(sk_{SA}\) e trattano \(EncVoto_{SA}\) come oggetto opaco.
+La segretezza \`e quindi preservata rispetto a tali entit\`a, sotto l'assunzione che la chiave privata di scrutinio non sia usata prima della chiusura dell'elezione e che la Scrutiny Authority segua la procedura prevista.
+
+La propriet\`a non \`e assoluta: un Voting Client compromesso pu\`o osservare o alterare la preferenza prima della cifratura; inoltre, una compromissione della chiave privata di scrutinio o una collusione critica nella fase di scrutinio pu\`o violare la segretezza.
+
+\subsubsection{Pseudoanonimato e separazione delle informazioni}
+
+Il protocollo non promette anonimato perfetto, ma mira a garantire pseudoanonimato.
+L'obiettivo \`e impedire che una singola entit\`a possa associare direttamente identit\`a reale, autorizzazione al voto e preferenza espressa.
+
+La Government Authority conosce l'identit\`a reale dell'elettore e rilascia il token, ma non riceve la scheda cifrata.
+Il Voting Server riceve token e scheda cifrata, ma non dovrebbe conoscere l'identit\`a reale dell'elettore n\'e la preferenza in chiaro.
+Il Registro Elettorale pubblica record relativi a schede cifrate, senza token e senza identit\`a.
+La Scrutiny Authority decifra le schede solo dopo la chiusura, ma non riceve informazioni di autenticazione o idoneit\`a.
+
+Rimangono tuttavia rischi residui di correlazione.
+Un avversario che combini log temporali della Government Authority, del Voting Server e del Registro Elettorale potrebbe tentare di correlare l'ordine di voto con l'identit\`a degli elettori.
+Il protocollo mitiga tale rischio separando le componenti e non pubblicando i token, ma non introduce meccanismi pi\`u avanzati come mixnet o anonimizzazione forte.
+
+\subsubsection{Integrit\`a dei messaggi e del registro}
+
+L'integrit\`a viene supportata da firme digitali, canali sicuri, hash e struttura Merkle-based.
+La cifratura della scheda protegge la segretezza, ma non viene considerata sufficiente a garantire integrit\`a.
+Per questo motivo il protocollo usa firme sui principali oggetti pubblici e messaggi critici.
+
+La Government Authority firma certificati, token, parametri pubblici e CRL.
+Il Voting Server firma il messaggio inoltrato al Registro Elettorale.
+Il Registro Elettorale firma ricevute e radice finale.
+I nodi della Scrutiny Authority firmano le autorizzazioni alla fase di scrutinio.
+
+Il Bulletin Board append-only, organizzato tramite foglie e radice Merkle, rende rilevabili modifiche, rimozioni o sostituzioni dei record dopo la pubblicazione.
+La sicurezza di questo meccanismo dipende dalla resistenza alle collisioni della funzione hash e dalla corretta pubblicazione della radice finale firmata.
+
+\subsubsection{Verificabilit\`a individuale}
+
+La verificabilit\`a individuale permette all'elettore di controllare che la propria scheda cifrata sia inclusa nel registro finale.
+Dopo l'accettazione della scheda, il Registro Elettorale produce una ricevuta contenente \(Leaf_i\) e la firma del Registro.
+Alla chiusura dell'elezione, il Registro pubblica \(Root_{final}\) e il relativo \(MerklePath_i^{final}\).
+
+L'elettore pu\`o quindi verificare che la foglia indicata nella ricevuta appartenga al Merkle Tree finale e che la radice sia firmata dal Registro Elettorale.
+Questa verifica prova l'inclusione della scheda cifrata, non la correttezza della preferenza cifrata dal client.
+
+Il protocollo supporta quindi una forma di verificabilit\`a individuale di inclusione.
+Non garantisce pienamente la propriet\`a di \emph{cast-as-intended} in presenza di Voting Client compromesso.
+
+\subsubsection{Verificabilit\`a universale}
+
+La verificabilit\`a universale richiede che osservatori esterni possano controllare la coerenza tra record pubblicati, schede scrutinabili e risultato finale.
+Nel protocollo, un verificatore pu\`o controllare \(BB_{final}\), \(Root_{final}\), la firma del Registro Elettorale, le autorizzazioni firmate dai nodi della Scrutiny Authority e la coerenza numerica tra schede accettate, token in stato \emph{committed} e risultato finale.
+
+Per rendere la verificabilit\`a universale effettiva rispetto al conteggio, il \(TallyBoard\) dovrebbe pubblicare anche l'elenco delle preferenze decifrate e validate, indicizzate rispetto ai record finali:
+
+\[
+    \{(i, v_i, status_i)\}_{i=1}^{m}.
+\]
+
+In questo modo, chiunque pu\`o ricalcolare:
+
+\[
+    m = count_{\text{S\`i}} + count_{\text{No}} + count_{invalid}.
+\]
+
+Questa scelta rafforza la trasparenza del conteggio, ma introduce un compromesso: la pubblicazione dei valori decifrati associati agli indici dei record pu\`o aumentare il rischio residuo di correlazione con metadati temporali o log esterni.
+Il protocollo accetta questo compromesso per privilegiare la verificabilit\`a universale richiesta dalla traccia.
+
+\subsubsection{Efficienza}
+
+L'efficienza viene considerata come vincolo progettuale e non solo come metrica sperimentale.
+Il protocollo adotta un referendum binario, riducendo la complessit\`a della scheda e dello scrutinio.
+Usa cifratura asimmetrica solo per oggetti piccoli o per proteggere la preferenza verso la Scrutiny Authority, mentre le comunicazioni operative avvengono su canali sicuri basati su chiavi di sessione.
+
+Il controllo di riuso del token richiede una ricerca su un digest di dimensione fissa in \(SpentTokensDB\).
+La verificabilit\`a individuale basata su Merkle Tree richiede prove di dimensione logaritmica rispetto al numero di schede pubblicate.
+La soluzione evita inoltre blockchain pubbliche o protocolli di consenso distribuito, che aumenterebbero complessit\`a, latenza e costo computazionale.
+
+\subsection{Analisi rispetto agli avversari del modello}
+
+\subsubsection{Elettore malevolo}
+
+Un elettore malevolo pu\`o tentare di votare pi\`u volte, riutilizzare un token, presentare una scheda non valida o ripudiare il proprio voto.
+Il protocollo mitiga il voto multiplo tramite \(IssuedTokensDB\) e \(SpentTokensDB\).
+La verifica della firma della GA sul token e della firma \(\sigma_U^{Ballot}\) impedisce l'uso di token non validi o non associati alla chiave dell'elettore.
+
+Un elettore pu\`o comunque tentare di mostrare a terzi elementi della propria sessione di voto.
+La ricevuta di inclusione non contiene la preferenza, ma il protocollo non garantisce piena resistenza alla coercizione in un contesto remoto non presidiato.
+
+\subsubsection{Voting Server malevolo}
+
+Un Voting Server malevolo potrebbe tentare di rifiutare schede valide, accettare schede duplicate, modificare schede cifrate o non inoltrarle al Registro Elettorale.
+La modifica delle schede o dei messaggi verso il Registro \`e mitigata tramite firme e verifica del Registro Elettorale.
+Il controllo \emph{pending}/\emph{committed} riduce il rischio di incoerenza tra token consumati e schede pubblicate.
+
+Il Voting Server resta per\`o una componente critica per la disponibilit\`a e pu\`o causare denial-of-service rifiutando richieste legittime.
+Questo rischio non viene eliminato crittograficamente dal protocollo.
+
+\subsubsection{Registro Elettorale malevolo}
+
+Un Registro Elettorale malevolo potrebbe tentare di omettere, modificare o riordinare record.
+La struttura append-only e la radice Merkle firmata rendono rilevabili modifiche successive alla pubblicazione finale.
+Le ricevute firmate permettono agli elettori di contestare l'eventuale mancata inclusione della propria scheda.
+
+Il Registro conserva comunque un ruolo importante: se rifiuta di pubblicare record o non rende disponibile il Bulletin Board finale, si produce un problema di disponibilit\`a e trasparenza che deve essere trattato come rischio residuo.
+
+\subsubsection{Government Authority malevola o compromessa}
+
+La Government Authority \`e una componente ad alta fiducia, perch\'e autentica gli elettori, verifica l'idoneit\`a, firma token, certificati, parametri pubblici e CRL.
+Una GA malevola potrebbe rilasciare token indebiti, negare autorizzazioni legittime, revocare certificati in modo scorretto o conservare log utili alla correlazione.
+
+Il protocollo riduce la capacit\`a della GA di conoscere la preferenza, perch\'e non riceve la scheda cifrata e non partecipa allo scrutinio.
+Tuttavia, non pu\`o eliminare completamente il rischio derivante da una GA malevola, che resta un'assunzione di fiducia esplicita.
+
+\subsubsection{Scrutiny Authority collusa o compromessa}
+
+La Scrutiny Authority decifra le schede solo dopo la chiusura delle urne.
+Nel protocollo base, la distribuzione della SA non viene modellata come threshold decryption matematica, ma come procedura di custodia e autorizzazione congiunta dell'uso di \(sk_{SA}\).
+
+Se meno di \(k\) nodi cooperano, lo scrutinio non dovrebbe essere autorizzato.
+Se almeno \(k\) nodi colludono o se la procedura di custodia di \(sk_{SA}\) viene aggirata, la protezione offerta dalla distribuzione non \`e sufficiente.
+Questo rischio deve essere dichiarato chiaramente: la soglia \(\langle k,n\rangle\) riduce il singolo punto di fiducia operativo, ma non fornisce una garanzia crittografica equivalente a una vera threshold cryptography.
+
+\subsubsection{Voting Client compromesso}
+
+Il Voting Client \`e una delle principali fonti di rischio residuo.
+Un client compromesso pu\`o modificare la preferenza prima della cifratura, mostrare opzioni false, conservare dati locali o comunicare la scelta a terzi.
+
+Il protocollo mitiga questo rischio tramite distribuzione ufficiale del client, verifica della firma del pacchetto applicativo, canali sicuri e verificabilit\`a di inclusione.
+Tuttavia, non pu\`o garantire che la preferenza cifrata corrisponda a quella effettivamente voluta dall'elettore.
+
+\subsubsection{Avversario di rete}
+
+Un avversario di rete pu\`o osservare, intercettare, modificare o riprodurre messaggi.
+Il protocollo mitiga questi attacchi tramite canali sicuri autenticati, certificati, verifica CRL, nonce, timestamp e firme sui messaggi rilevanti.
+
+I replay vengono mitigati tramite valori freschi e controllo di stato, in particolare sul token di voto.
+Rimangono possibili attacchi di disponibilit\`a, come blocco delle comunicazioni o ritardi artificiali, che non vengono risolti dalla sola crittografia.
+
+\subsection{Compromessi progettuali}
+
+Il protocollo adotta alcuni compromessi espliciti.
+Tali compromessi non rappresentano errori della soluzione, ma scelte motivate rispetto agli obiettivi della traccia e agli strumenti trattati nel corso.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.34\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|}
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Scelta} & \textbf{Motivazione} & \textbf{Rischio residuo} \\
+    \hline
+    \endfirsthead
+    \hline
+    \rowcolor{HeaderBlue}\textbf{Scelta} & \textbf{Motivazione} & \textbf{Rischio residuo} \\
+    \hline
+    \endhead
+    Referendum binario & Riduce complessit\`a della scheda e dello scrutinio. & Minore generalit\`a rispetto a elezioni complesse. \\
+    \hline
+    Nessuna sostituzione del voto & Mantiene semplice l'unicit\`a del token e riduce ambiguit\`a nello scrutinio. & L'elettore non pu\`o correggere un voto inviato. \\
+    \hline
+    Pubblicazione delle preferenze decifrate validate & Rafforza la verificabilit\`a universale del conteggio. & Possibile correlazione con ordine o timestamp dei record. \\
+    \hline
+    Custodia distribuita non-threshold di \(sk_{SA}\) & Evita primitive avanzate non trattate come soluzione principale. & Non offre garanzia matematica di threshold decryption. \\
+    \hline
+    Nessuna blockchain pubblica & Riduce complessit\`a, latenza e overengineering. & La trasparenza dipende dal Bulletin Board e dalle firme pubblicate. \\
+    \hline
+    Nessuna mixnet & Mantiene il protocollo aderente agli strumenti del corso. & Resta rischio residuo di correlazione temporale. \\
+    \hline
+\end{longtable}
+
+\subsection{Rischi residui}
+
+I principali rischi residui sono i seguenti:
+
+\begin{itemize}
+    \item compromissione del Voting Client o del dispositivo dell'elettore;
+    \item collusione tra pi\`u entit\`a infrastrutturali, in particolare tra GA, VS, ER e SA;
+    \item uso improprio o compromissione della chiave privata di scrutinio \(sk_{SA}\);
+    \item correlazione tramite log temporali, indirizzi di rete o ordine dei record pubblicati;
+    \item attacchi alla disponibilit\`a di GA, VS, ER o canali di comunicazione;
+    \item revoche non disponibili o CRL non aggiornate;
+    \item assenza di una piena resistenza alla coercizione nel voto remoto non presidiato.
+\end{itemize}
+
+Questi rischi non invalidano il protocollo, ma delimitano il livello di sicurezza effettivamente raggiunto.
+La soluzione proposta mira a un compromesso ragionevole tra sicurezza, verificabilit\`a, efficienza e semplicit\`a progettuale, senza introdurre primitive avanzate non necessarie rispetto agli obiettivi del project work.
+
+\subsection{Possibili estensioni future non adottate}
+
+Alcune estensioni potrebbero migliorare specifiche propriet\`a del sistema, ma non vengono adottate come parte principale del protocollo per evitare overengineering e mantenere coerenza con gli strumenti trattati nel corso.
+
+\begin{itemize}
+    \item \textbf{Threshold decryption crittografica:} migliorerebbe la protezione della chiave di scrutinio, ma richiederebbe una costruzione specifica come threshold RSA o threshold ElGamal.
+    \item \textbf{Mixnet:} ridurrebbe il rischio di correlazione tra ordine di arrivo e ordine di scrutinio, ma aumenterebbe la complessit\`a del protocollo.
+    \item \textbf{Cifratura omomorfa:} permetterebbe di calcolare il risultato senza decifrare singole schede, ma introduce primitive pi\`u avanzate.
+    \item \textbf{Blockchain pubblica:} potrebbe aumentare la trasparenza del registro, ma introdurrebbe costi, latenza e problemi di governance non necessari per il modello scelto.
+    \item \textbf{Voto sostituibile:} potrebbe mitigare coercizione e errori dell'elettore, ma complicherebbe la gestione di token, versioni della scheda e verificabilit\`a.
+\end{itemize}
+
+\subsection{Conclusione dell'analisi}
+
+L'analisi mostra che il protocollo supporta in modo pi\`u solido autenticit\`a, unicit\`a, integrit\`a e verificabilit\`a di inclusione.
+Segretezza e pseudoanonimato sono mitigati tramite cifratura, separazione delle responsabilit\`a e mancata pubblicazione dei token, ma restano dipendenti dalle assunzioni su client, Scrutiny Authority e assenza di collusione estesa.
+
+La verificabilit\`a universale pu\`o essere resa pi\`u forte pubblicando nel \(TallyBoard\) le preferenze decifrate e validate, collegate ai record finali.
+Questa scelta rende il conteggio controllabile pubblicamente, ma deve essere accompagnata dalla dichiarazione del rischio residuo di correlazione.
+
+Il protocollo non garantisce pienamente coercion-resistance, disponibilit\`a o anonimato perfetto.
+Tali limiti sono coerenti con l'obiettivo del progetto: costruire una soluzione ragionevole, efficiente e difendibile, dichiarando con precisione assunzioni e rischi residui.
+
+\end{document}
