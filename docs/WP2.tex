@@ -74,6 +74,7 @@
 
 \begin{document}
 
+\hypersetup{pageanchor=false}
 \pagenumbering{roman}
 \begin{titlepage}
 	\centering
@@ -91,6 +92,7 @@
 	{\large A.A. 2025--2026}
 \end{titlepage}
 
+\hypersetup{pageanchor=true}
 \tableofcontents
 \newpage
 \pagenumbering{arabic}
@@ -205,6 +207,8 @@ Con $pk_X$ e $sk_X$ si indicano rispettivamente la chiave pubblica e la chiave p
 	$v$                                   & Preferenza selezionata dall'elettore, con $v \in Options$.                                                                                                               \\
 	\hline
 	$EncVoto_{SA}$                        & Voto cifrato con $pk_{SA}$.                                                                                                                                              \\
+    $BallotCommit_U$ & Commitment crittografico calcolato dal Voting Client sulla scheda cifrata prodotta localmente. Viene conservato localmente dal client e inserito nella busta di voto, nel record pubblicato e nella ricevuta firmata, per permettere all'elettore di rilevare eventuali sostituzioni della scheda cifrata da parte del Voting Server. \\
+
 	\hline
 	$Ballot$                              & Busta logica di voto inviata dal Voting Client al Voting Server.                                                                                                         \\
 	\hline
@@ -239,11 +243,11 @@ Con $pk_X$ e $sk_X$ si indicano rispettivamente la chiave pubblica e la chiave p
 	\hline
 	$EncToken_U$                          & Token cifrato dalla GA verso il Voting Client usando $pk_U$.                                                                         \\
 	\hline
-	$Salt_i$                              & Sale dinamico derivato dal VS per la transazione $i$-esima.                                                                          \\
+	$K_{Master\_Server}$                  & Segreto interno del VS usato per derivare i sali dinamici.                                                                            \\
 	\hline
-	$K_{Master\_Server}$                  & Segreto interno del VS usato per derivare i sali dinamici.                                                                           \\
+	\(K_{Spent}^{Election}\)              & Chiave interna derivata dal Voting Server per la specifica elezione, calcolata come \(H(K_{Master\_Server} \parallel ID_{Election})\). Non \`e un sale classico, ma una chiave deterministica usata per calcolare il tag HMAC dei token spesi. \\
 	\hline
-	$Hash_{Spent}$                        & Digest memorizzato in $SpentTokensDB$ per riconoscere token già usati.                                                               \\
+	\(LookupTag_{Token}\)                 & Tag deterministico di lookup calcolato dal Voting Server come \(HMAC_{K_{Spent}^{Election}}(SerialNumber_{Token})\). Viene memorizzato in \(SpentTokensDB\) per rilevare il riuso del token senza salvare il token completo o il suo numero seriale in chiaro. \\
 	\hline
 \end{longtable}
 
@@ -441,7 +445,7 @@ Il risultato di questa fase \`e una chiave di sessione \(k_{session}\), usata da
 
 Il canale sicuro garantisce che un avversario esterno non possa sostituirsi al Voting Server, leggere o modificare la busta di voto durante la trasmissione o riutilizzare messaggi di sessioni precedenti.
 Tuttavia, se il client locale \`e gi\`a malevolo o il dispositivo \`e compromesso, il canale sicuro non impedisce la manipolazione prima dell'invio.
-Per questo motivo, la sicurezza del protocollo non viene fondata sulla piena fiducia nel client, ma sulla combinazione tra distribuzione ufficiale del software, verifiche crittografiche, cifratura end-to-end della scheda verso la Scrutiny Authority e verificabilit\`a successiva dell'inclusione.
+Per questo motivo, la sicurezza del protocollo viene fondata tra distribuzione ufficiale del software, verifiche crittografiche, cifratura della scheda verso la Scrutiny Authority e verificabilit\`a successiva dell'inclusione.
 
 \textbf{Dati che conosce e gestisce temporaneamente.}
 Durante il protocollo, il Voting Client pu\`o trattare \(Params_{Election}\), \(CRL_{Election}\), i certificati delle entit\`a operative, \(ID_{Election}\), il token di autorizzazione ricevuto, la coppia \((pk_U, sk_U)\), la preferenza selezionata prima della cifratura, la scheda cifrata e la ricevuta di inclusione.
@@ -634,6 +638,8 @@ L'obiettivo non \`e descrivere la teoria delle primitive, ma chiarire in quali p
 \end{longtable}
 
 Le primitive vengono quindi usate in modo complementare: la cifratura protegge la segretezza della preferenza, le firme digitali e i certificati supportano autenticit\`a e distribuzione fidata delle chiavi pubbliche, gli hash rendono verificabili i dati pubblicati, mentre i meccanismi di autenticazione del canale proteggono i messaggi in transito. 
+Per ragioni di efficienza, il protocollo usa la crittografia asimmetrica solo per autenticare le entit\`a, proteggere oggetti piccoli o stabilire una chiave di sessione.
+I messaggi successivi viaggiano invece sul canale sicuro basato su \(k_{session}\), evitando di applicare operazioni asimmetriche ridondanti a ogni scambio per aumentare l'efficienza del protocollo, in quanto le operazioni asimmetriche risultano computazionalmente più impegnative di quelle simmetriche.
 La soluzione evita di assumere che una singola primitiva garantisca tutte le propriet\`a di sicurezza.
 
 \subsection{Setup iniziale e infrastruttura di fiducia}
@@ -707,12 +713,13 @@ Le entit\`a candidate, ovvero: Voting Server, Registro Elettorale e nodi fiducia
 
 La richiesta di accreditamento di una generica entit\`a \(X\) \`e rappresentata da:
 
-\[
-	RequestCert_X =
-	(ID_X, Role_X, ID_{Election}, pk_X, OrganizationInfo_X, ValidFrom,
-    ValidTo, Nonce_X,
-    \sigma_X).
-\]
+\begin{equation}
+\begin{split}
+	\text{RequestCert}_X = \Big( & ID_X, \text{Role}_X, ID_{\text{Election}}, pk_X, \\
+	& \text{OrganizationInfo}_X, \text{ValidFrom}, \\
+	& \text{ValidTo}, \text{Nonce}_X, \sigma_X \Big)
+\end{split}
+\end{equation}
 
 I campi principali hanno il seguente significato:
 
@@ -728,16 +735,19 @@ I campi principali hanno il seguente significato:
 \end{itemize}
 
 La firma della richiesta viene calcolata come:
-\[
-	\sigma_X =
-	Sign_{sk_X}(H(ID_X \parallel Role_X \parallel ID_{Election} \parallel pk_X \parallel OrganizationInfo_X \parallel ValidFrom \parallel ValidTo \parallel Nonce_X)).
-\]
-
+\begin{equation}
+\begin{split}
+	\sigma_X = \text{Sign}_{sk_X}\Big( H \big( & ID_X \parallel \text{Role}_X \parallel ID_{\text{Election}} \parallel pk_X \parallel \\
+	& \text{OrganizationInfo}_X \parallel \text{ValidFrom} \parallel \\
+	& \text{ValidTo} \parallel \text{Nonce}_X \big) \Big)
+\end{split}
+\end{equation}
 Questa firma dimostra che l'entit\`a che richiede il certificato possiede la chiave privata associata a \(pk_X\).
 
 \subsubsection{Verifica della richiesta da parte della Government Authority}
 
 Ricevuta la richiesta, la Government Authority esegue i controlli necessari prima di autorizzare l'emissione del certificato. La verifica viene fatta attravero questi controlli:
+
 
 \begin{itemize}
 	\item controllo della presenza di \(ID_X\) nel registro \(EligibleEntitiesDB\);
@@ -747,6 +757,8 @@ Ricevuta la richiesta, la Government Authority esegue i controlli necessari prim
 	\item controllo della finestra temporale \(ValidFrom, ValidTo\);
 	\item controllo della completezza e coerenza delle informazioni organizzative.
 \end{itemize}
+
+Il controllo su \(EligibleEntitiesDB\) assume che tale registro sia stato popolato tramite una procedura amministrativa preliminare di accreditamento, esterna al protocollo crittografico ma necessaria per stabilire l'identit\`a reale dell'entit\`a candidata.
 
 Se almeno uno dei controlli fallisce, la richiesta viene rifiutata e l'entit\`a non pu\`o operare nel protocollo per quella specifica elezione. 
 Se tutti i controlli hanno esito positivo, la Government Authority procede con l'emissione del certificato.
@@ -764,10 +776,13 @@ Il certificato di una generica entit\`a \(X\) \`e rappresentato da:
 Il campo $SerialNumber_X$ indica il numero seriale del certificato che identifica univocamente quest'ultimo.
 
 La firma della Government Authority \`e calcolata sul contenuto del certificato esclusa la firma stessa:
-\[
-	\sigma_{GA}^{Cert_X} =
-	Sign_{sk_{GA}}(H(ID_X \parallel Role_X \parallel ID_{Election} \parallel pk_X \parallel ValidFrom \parallel ValidTo \parallel SerialNumber_X)).
-\]
+\begin{equation}
+\begin{split}
+	\sigma_{GA}^{Cert_X} = \text{Sign}_{sk_{GA}}\Big(H(&ID_X \parallel Role_X
+	\parallel ID_{Election} \parallel pk_X \parallel {}\\
+	&ValidFrom \parallel ValidTo \parallel SerialNumber_X)\Big).
+\end{split}
+\end{equation}
 
 I certificati prodotti in questa fase sono
 
@@ -806,9 +821,11 @@ dove:
 \[
 \begin{aligned}
 	\sigma_{GA}^{Params} =
-	Sign_{sk_{GA}}(H(&ID_{Election} \parallel ElectionType \parallel Options \parallel TimeOpen \parallel TimeClose \parallel\\
-	&Cert_{VS} \parallel Cert_{ER} \parallel \{Cert_{SA_i}\}_{i=1}^{n} \parallel pk_{SA} \parallel \langle k,n\rangle \parallel\\
-	&H(Policy) \parallel Version \parallel Timestamp)).
+	\text{Sign}_{sk_{GA}}\Big(H(&ID_{Election} \parallel ElectionType
+	\parallel Options \parallel {}\\
+	&TimeOpen \parallel TimeClose \parallel Cert_{VS} \parallel Cert_{ER} \parallel {}\\
+	&\{Cert_{SA_i}\}_{i=1}^{n} \parallel pk_{SA} \parallel \langle k,n\rangle \parallel {}\\
+	&H(Policy) \parallel Version \parallel Timestamp)\Big).
 \end{aligned}
 \]
 
@@ -837,17 +854,21 @@ La lista contiene i numeri seriali dei certificati che non devono pi\`u essere a
 
 La lista di revoca \`e rappresentata come:
 
-\[
-	CRL_{Election} =
-	(ID_{Election}, RevokedSerialNumbers, Version_{CRL}, Timestamp_{CRL}, NextUpdate, \sigma_{GA}^{CRL}).
-\]
+\begin{equation}
+\begin{split}
+	\text{CRL}_{\text{Election}} = \Big( & ID_{\text{Election}}, \text{RevokedSerialNumbers}, \text{Version}_{\text{CRL}}, \\
+	& \text{Timestamp}_{\text{CRL}}, \text{NextUpdate}, \sigma_{\text{GA}}^{\text{CRL}} \Big)
+\end{split}
+\end{equation}
 
 La firma della Government Authority \`e calcolata come:
 
-\[
-	\sigma_{GA}^{CRL} =
-	Sign_{sk_{GA}}(H(ID_{Election} \parallel RevokedSerialNumbers \parallel Version_{CRL} \parallel Timestamp_{CRL} \parallel NextUpdate)).
-\]
+\begin{equation}
+\begin{split}
+	\sigma_{\text{GA}}^{\text{CRL}} = \text{Sign}_{sk_{\text{GA}}}\Big( H \big( & ID_{\text{Election}} \parallel \text{RevokedSerialNumbers} \parallel \\
+	& \text{Version}_{\text{CRL}} \parallel \text{Timestamp}_{\text{CRL}} \parallel \text{NextUpdate} \big) \Big)
+\end{split}
+\end{equation}
 
 I campi principali hanno il seguente significato:
 
@@ -892,7 +913,7 @@ La firma \(\sigma_X^{Rev}\) viene prodotta con la chiave privata dell'entit\`a:
 	Sign_{sk_X}(H(ID_{Election} \parallel SerialNumber_X \parallel Reason_X \parallel Timestamp_X)).
 \]
 
-La Government Authority verifica la richiesta, controlla che il certificato sia stato effettivamente emesso per l'entit\`a indicata e aggiorna lo stato del certificato nei propri registri interni.
+La Government Authority verifica la richiesta, controlla che il certificato sia stato effettivamente emesso per l'entit\`a indicata, controllandone la firma attraverso la chiave pubblica salvata. Dopo aver effettuato il controllo, viene aggiornato lo stato del certificato e aggiorna il proprio registro interno.
 
 Nel caso di revoca d'ufficio, la Government Authority aggiorna direttamente lo stato del certificato associato all'entit\`a, utilizzando le informazioni conservate durante la fase di accreditamento. 
 In entrambi i casi, la revoca diventa operativa tramite la pubblicazione di una nuova versione di \(CRL_{Election}\), con \(Version_{CRL}\) incrementata e firma aggiornata.
@@ -1020,10 +1041,13 @@ Non contiene la preferenza dell'elettore.
 
 La Government Authority firma il permesso:
 
-\[
-	\sigma_{GA}^{Permit} =
-	Sign_{sk_{GA}}(H(ID_{Election} \parallel SerialNumber_{Token} \parallel pk_U \parallel ValidFrom \parallel ValidTo)).
-\]
+\begin{equation}
+\begin{split}
+	\sigma_{GA}^{Permit} = \text{Sign}_{sk_{GA}}\Big(H(&ID_{Election}
+	\parallel SerialNumber_{Token} \parallel pk_U \parallel {}\\
+	&ValidFrom \parallel ValidTo)\Big).
+\end{split}
+\end{equation}
 
 Il token di autorizzazione \`e quindi:
 
@@ -1046,7 +1070,7 @@ Il Voting Client recupera il token decifrando localmente:
 	Dec_{sk_U}(EncToken_U).
 \]
 
-La Government Authority aggiorna \(IssuedTokensDB\), registrando che per l'elettore autenticato \`e stato emesso un token per \(ID_{Election}\). 
+La Government Authority aggiorna \(IssuedTokensDB\), registrando \(EncToken_U\) e che per l'elettore autenticato \`e stato emesso un token per \(ID_{Election}\).
 Questa registrazione serve a impedire l'emissione di pi\`u token per lo stesso elettore nella medesima elezione.
 
 \subsection{Fase 4: preparazione locale della scheda}
@@ -1064,12 +1088,7 @@ L'elettore seleziona una preferenza:
 	v \in Options.
 \]
 
-Il Voting Client genera un valore casuale \(nonce_{ballot}\), usato per legare la scheda a una specifica esecuzione locale del protocollo, e costruisce il contenuto logico del voto:
-
-\[
-	VotePlain_U =
-	(ID_{Election}, v, nonce_{ballot}).
-\]
+Il Voting Client genera un valore casuale \(nonce_{ballot}\), usato per legare la scheda a una specifica esecuzione locale del protocollo.
 
 Prima dell'invio della scheda, il Voting Client cifra localmente la preferenza selezionata utilizzando la chiave pubblica elettorale della Scrutiny Authority, pubblicata in \(Params_{Election}\). Poich\'e nel caso considerato il voto \`e binario, la cifratura della preferenza non deve essere deterministica. Se lo stesso valore \(v\) producesse sempre lo stesso ciphertext sotto la stessa chiave pubblica \(pk_{SA}\), un osservatore del Bulletin Board potrebbe riconoscere schede uguali e ricavare informazioni statistiche dai pattern dei ciphertext pubblicati. 
 Per questo motivo il protocollo richiede uno schema di cifratura asimmetrica probabilistica, ad esempio RSA-OAEP, in modo che due cifrature della stessa preferenza producano ciphertext diversi grazie alla randomizzazione interna dello schema. 
@@ -1078,12 +1097,28 @@ Il Voting Client calcola quindi: \[ EncVoto_{SA} = Enc_{pk_{SA}}^{prob}(v), \] d
 Da questo momento, Voting Server e Registro Elettorale trattano solo la scheda cifrata. 
 La preferenza in chiaro rimane disponibile nel Voting Client solo durante la compilazione locale e deve essere eliminata dalla memoria non appena non risulta pi\`u necessaria.
 
-Il client prepara inoltre una firma di possesso della chiave privata associata al token:
+Dopo aver prodotto la scheda cifrata, il Voting Client calcola un commitment crittografico della scheda:
 
 \[
-	\sigma_U^{Ballot} =
-	Sign_{sk_U}(H(ID_{Election} \parallel EncVoto_{SA} \parallel SerialNumber_{Token} \parallel nonce_{ballot})).
+	BallotCommit_U =
+	H(ID_{Election} \parallel EncVoto_{SA} \parallel nonce_{ballot}).
 \]
+
+Il valore \(BallotCommit_U\) non rivela la preferenza, poich\'e viene calcolato su una scheda cifrata probabilisticamente.
+Il Voting Client conserva localmente \(BallotCommit_U\) fino alla verifica individuale finale, in modo da poterlo confrontare con il valore contenuto nella ricevuta firmata dal Registro Elettorale.
+
+Il commitment non impedisce da solo la perfetta integrità della scheda.
+La sua funzione \`e rendere rilevabile dall'elettore una sostituzione della scheda cifrata prima della pubblicazione.
+
+Il client prepara inoltre una firma di possesso della chiave privata associata al token:
+
+\begin{equation}
+\begin{split}
+	\sigma_U^{Ballot} = \text{Sign}_{sk_U}\Big(H(&ID_{Election}
+	\parallel EncVoto_{SA} \parallel VotingToken_U \parallel {}\\
+	&nonce_{ballot} \parallel BallotCommit_U)\Big).
+\end{split}
+\end{equation}
 
 Questa firma consente al Voting Server di verificare che chi presenta il token possieda la chiave privata corrispondente a \(pk_U\), presente nel permesso firmato dalla Government Authority.
 
@@ -1149,6 +1184,7 @@ Ai fini del protocollo di voto, \`e sufficiente assumere che il canale stabilito
 	\text{freschezza}.
 \]
 
+
 Terminata questa fase, il Voting Client dispone di un canale sicuro verso un Voting Server autenticato per \(ID_{Election}\).
 Solo a questo punto il client trasmette la busta di voto contenente il token di autorizzazione e la scheda cifrata.
 
@@ -1158,7 +1194,7 @@ Il Voting Client costruisce la busta di voto:
 
 \[
 	Ballot =
-	(ID_{Election}, EncVoto_{SA}, VotingToken_U, \sigma_U^{Ballot}, nonce_{ballot}).
+	(ID_{Election}, EncVoto_{SA}, VotingToken_U, nonce_{ballot}, BallotCommit_U, \sigma_U^{Ballot}).
 \]
 
 Il messaggio viene inviato al Voting Server attraverso il canale sicuro stabilito nella fase precedente:
@@ -1170,14 +1206,18 @@ Il messaggio viene inviato al Voting Server attraverso il canale sicuro stabilit
 Il Voting Server esegue i controlli necessari prima di accettare la scheda:
 
 \begin{itemize}
-	\item verifica che \(ID_{Election}\) corrisponda all'elezione corrente;
-	\item verifica la firma della Government Authority sul token;
-	\item controlla la validit\`a temporale di \(Permit_U\);
-	\item estrae \(pk_U\) dal permesso firmato;
-	\item verifica \(\sigma_U^{Ballot}\) usando \(pk_U\);
-	\item controlla che il token non sia gi\`a stato usato;
-	\item verifica la freschezza del messaggio tramite \(nonce_{ballot}\)
+    \item verifica che \(\text{ID}_{\text{Election}}\) corrisponda all'elezione corrente;
+    \item verifica la firma della Government Authority sul token;
+    \item controlla la validità temporale di \(\text{Permit}_U\);
+    \item estrae \(pk_U\) dal permesso firmato;
+    \item verifica la coerenza di \(\text{BallotCommit}_U\);
+    \item verifica \(\sigma_U^{\text{Ballot}}\) usando \(pk_U\);
+    \item controlla che il token non sia già stato usato;
+    \item verifica la freschezza del messaggio tramite \(\text{nonce}_{\text{ballot}}\).
 \end{itemize}
+
+Per ridurre il carico computazionale in presenza di richieste malformate o malevole, il Voting Server esegue i controlli in ordine crescente di costo.
+Vengono prima verificati formato del messaggio, \(ID_{Election}\), finestra temporale e presenza dei campi obbligatori; solo successivamente vengono eseguite le verifiche crittografiche pi\`u costose, come la verifica delle firme.
 
 La verifica della firma della Government Authority sul token \`e:
 
@@ -1185,63 +1225,74 @@ La verifica della firma della Government Authority sul token \`e:
 	Verify_{pk_{GA}}(Permit_U, \sigma_{GA}^{Permit}) = TRUE.
 \]
 
+Il Voting Server verifica anzitutto la coerenza del commitment:
+
+\[
+	BallotCommit_U =
+	H(ID_{Election} \parallel EncVoto_{SA} \parallel nonce_{ballot}).
+\]
+
 La verifica della prova di possesso della chiave dell'elettore, serve ad assicurarsi che il Token all'interno
 del Ballot sia stato utilizzato dall'effettivo richiedente dell'autorizzazione al voto. Questo perchè, a partire dalla generazione
 delle chiavi pubbliche e private da parte del client, l'autorizzazione al voto rilasciata dalla GA è firmata dalla suddetta e contiene
 anche la chiave pubblica dell'utente che la richiede. La verifica viene effettuata in questo modo:
 
-\[
-	Verify_{pk_U}(ID_{Election} \parallel EncVoto_{SA} \parallel SerialNumber_{Token} \parallel nonce_{ballot}, \sigma_U^{Ballot}) = TRUE.
-\]
-
-
+\begin{equation}
+\begin{split}
+	\text{Verify}_{pk_U}\Big( & ID_{\text{Election}} \parallel \text{EncVoto}_{\text{SA}} \parallel \text{VotingToken}_U \parallel \text{nonce}_{\text{ballot}}, \\
+	& \text{BallotCommit}_U, \sigma_U^{\text{Ballot}} \Big) = \text{TRUE}
+\end{split}
+\end{equation}
 
 Se almeno uno dei controlli fallisce, il Voting Server rifiuta la busta di voto. 
 Se tutti i controlli hanno esito positivo, il Server procede con la registrazione del Token. 
-
 \subsection{Fase 7: registrazione del token speso}
 
-Per garantire l'unicit\`a del voto, il Voting Server deve impedire il riutilizzo dello stesso token di autorizzazione. 
-Il server non conserva il token completo in chiaro all'interno di \(SpentTokensDB\), ma memorizza un riferimento non invertibile derivato dal numero seriale del token.
+Per garantire l'unicit`a del voto, il Voting Server deve impedire il riutilizzo dello stesso token di autorizzazione.
+Il server non conserva il token completo in chiaro all'interno di (SpentTokensDB), n'e memorizza direttamente il numero seriale del token.
+Al contrario, salva un tag deterministico di lookup calcolato a partire dal numero seriale e da una chiave interna derivata dal segreto del Voting Server.
 
-Il server calcola un sale dinamico deterministico:
-
+Per la specifica elezione, il Voting Server deriva innanzitutto una chiave interna:
 \[
-	Salt_i =
-	H(K_{Master\_Server} \parallel ID_{Election} \parallel SerialNumber_{Token}).
+K_{\text{Spent}}^{\text{Election}} = H(K_{\text{Master\_Server}} \parallel \mathit{ID}_{\text{Election}})
 \]
 
-Successivamente calcola il digest da inserire nel registro dei token spesi:
+Il valore $K_{\text{Spent}}^{\text{Election}}$ non è un sale classico casuale per record, ma una chiave deterministica specifica per l'elezione, derivata da un segreto interno del Voting Server.
+La sua funzione è permettere il calcolo di un riferimento non invertibile del token, evitando che il contenuto di $\mathit{SpentTokensDB}$ riveli direttamente i numeri seriali dei token utilizzati.
+
+A partire dal numero seriale del token, il Voting Server calcola quindi:
 
 \[
-	Hash_{Spent} =
-	H(SerialNumber_{Token} \parallel Salt_i).
+\mathit{LookupTag}_{\text{Token}} = \text{HMAC}_{K_{\text{Spent}}^{\text{Election}}}(\mathit{SerialNumber}_{\text{Token}})
 \]
 
-Il valore \(Hash_{Spent}\) viene cercato in \(SpentTokensDB\). 
-Se il digest \`e gi\`a presente in stato \emph{pending} o \emph{committed}, il token \`e considerato gi\`a utilizzato e la busta di voto viene rifiutata.
+Il valore $\mathit{LookupTag}_{\text{Token}}$ viene cercato in $\mathit{SpentTokensDB}$.
+Se il tag è già presente in stato \emph{pending} o \emph{committed}, il token è considerato già utilizzato e la busta di voto viene rifiutata.
 
-Se il digest non \`e presente, il Voting Server inserisce una nuova entry nello stato \emph{pending}:
+Se il tag non è presente, il Voting Server inserisce una nuova entry nello stato \emph{pending}:
 
 \[
-	SpentEntry =
-	(Hash_{Spent}, ID_{Election}, status, timestamp_{VS}),
+\mathit{SpentEntry} = (\mathit{LookupTag}_{\text{Token}}, \mathit{ID}_{\text{Election}}, \text{status}, \text{timestamp}_{\text{VS}})
 \]
 
-con:
+Lo stato \emph{pending} indica che il token `e stato validato dal Voting Server e temporaneamente bloccato contro tentativi di riuso, ma che la scheda cifrata non `e ancora stata confermata dal Registro Elettorale.
+
+Il token viene considerato definitivamente consumato solo dopo la ricezione e la verifica della ricevuta firmata ($\mathit{Receipt\_U}$), prodotta dal Registro Elettorale.
+Solo in quel momento il Voting Server aggiorna l'entry corrispondente:
 
 \[
-	status = pending.
+\text{status} = \text{committed}
 \]
+
+Questa scelta evita che un token venga marcato come definitivamente speso prima che esista una prova firmata dell'effettiva presa in carico della scheda cifrata da parte del Registro Elettorale.
+
+Inoltre, poiché lo stesso $\mathit{SerialNumber}_{\text{Token}}$ produce sempre lo stesso $\mathit{LookupTag}_{\text{Token}}$ per la stessa elezione, il Voting Server può rilevare tentativi di riuso senza memorizzare il token o il suo seriale in chiaro.
 
 Lo stato \emph{pending} indica che il token \`e stato validato dal Voting Server e temporaneamente bloccato contro tentativi di riuso, ma che la scheda cifrata non \`e ancora stata confermata dal Registro Elettorale.
-Il token viene considerato definitivamente consumato solo dopo la ricezione della ricevuta firmata \(Receipt_U\) prodotta dal Registro Elettorale.
-Il sale deve essere derivato in modo deterministico a partire dal numero seriale del token e da un segreto interno del server. 
-In questo modo, lo stesso token produce sempre lo stesso digest di controllo, consentendo al Voting Server di rilevare tentativi di riuso senza memorizzare direttamente il token. Questa scelta evita che un token venga marcato come definitivamente speso prima che esista una prova firmata dell'effettiva presa in carico della scheda da parte del Registro Elettorale.
+ Questa scelta evita che un token venga marcato come definitivamente speso prima che esista una prova firmata dell'effettiva presa in carico della scheda da parte del Registro Elettorale.
 
 
-
-\subsection{Fase 8: pubblicazione sul Registro Elettorale / Bulletin Board}
+\subsection{Fase 8: pubblicazione sul Registro Elettorale}
 
 Dopo aver accettato la busta di voto e aver marcato il token in stato \emph{pending}, il Voting Server inoltra al Registro Elettorale/Bulletin Board solo la scheda cifrata e i metadati necessari alla registrazione pubblica.
 Il token di autorizzazione non viene pubblicato sul registro, in modo da ridurre il rischio di correlazione tra autorizzazione al voto e scheda registrata.
@@ -1250,7 +1301,7 @@ Il payload del messaggio inviato dal Voting Server al Registro Elettorale \`e:
 
 \[
 	M_{VS} =
-	(ID_{Election}, EncVoto_{SA}, timestamp_{VS}).
+	(ID_{Election}, EncVoto_{SA}, timestamp_{VS}, BallotCommit_U, nonce_{ballot}).
 \]
 
 Il Voting Server firma tale payload:
@@ -1269,6 +1320,17 @@ Il messaggio inviato al Registro Elettorale \`e quindi:
 
 Il Registro Elettorale verifica la firma del Voting Server tramite il certificato \(Cert_{VS}\), controllando che il certificato sia valido, riferito a \(ID_{Election}\), associato al ruolo di Voting Server e non revocato in \(CRL_{Election}\).
 
+Il Registro Elettorale verifica inoltre la coerenza interna tra la scheda cifrata e il commitment ricevuto:
+
+\[
+	BallotCommit_U =
+	H(ID_{Election} \parallel EncVoto_{SA} \parallel nonce_{ballot}).
+\]
+
+Se il controllo fallisce, il record viene rifiutato.
+Questo controllo permette al Registro di rilevare messaggi incoerenti, ma non impedisce a un Voting Server malevolo di sostituire sia \(EncVoto_{SA}\) sia \(BallotCommit_U\).
+In tale caso, la sostituzione resta rilevabile dall'elettore tramite il confronto con il commitment conservato localmente.
+
 Se la verifica ha esito positivo, il Registro inserisce \(M_{board}\) nella propria Bulletin Board append-only, assegnandogli una posizione pubblica \(i\) e un timestamp di registrazione:
 
 \[
@@ -1278,7 +1340,6 @@ Se la verifica ha esito positivo, il Registro inserisce \(M_{board}\) nella prop
 
 L'indice \(i\) non rappresenta l'identit\`a dell'elettore e non contiene informazioni sulla preferenza espressa.
 Esso indica soltanto la posizione del record nella sequenza pubblica del Bulletin Board e, di conseguenza, la posizione della foglia nella struttura Merkle finale.
-L'indice non viene quindi usato come garanzia autonoma di sicurezza, ma come informazione tecnica di ordinamento.
 
 Oltre alla registrazione append-only, il Registro Elettorale organizza i record tramite una struttura Merkle-based.
 Questa struttura viene usata per fornire, alla fine dell'elezione, una prova di inclusione della scheda cifrata nel registro pubblicato.
@@ -1296,7 +1357,7 @@ La ricevuta immediata contiene quindi soltanto un riferimento crittografico firm
 
 \[
 	Receipt_U =
-	(ID_{Election}, Leaf_i, timestamp_{ER}, \sigma_{ER}^{Receipt}).
+	(ID_{Election}, Leaf_i, timestamp_{ER}, BallotCommit_U, \sigma_{ER}^{Receipt}).
 \]
 
 La firma del Registro Elettorale \`e calcolata come:
@@ -1305,7 +1366,7 @@ La firma del Registro Elettorale \`e calcolata come:
 	\sigma_{ER}^{Receipt} =
 	Sign_{sk_{ER}}
 	\big(
-	H(ID_{Election} \parallel Leaf_i \parallel timestamp_{ER})
+	H(ID_{Election} \parallel Leaf_i \parallel timestamp_{ER}\parallel BallotCommit_U)
 	\big).
 \]
 
@@ -1339,7 +1400,9 @@ Il Voting Server inoltra quindi la ricevuta al Voting Client attraverso il canal
 \]
 
 Il Voting Client mantiene aperto il canale sicuro con il Voting Server fino alla ricezione di \(Receipt_U\).
-Solo dopo aver ricevuto la ricevuta firmata dal Registro Elettorale, il client considera conclusa la fase di invio del voto.
+Il Voting Client, alla ricezione della ricevuta, verifica che \(BallotCommit_U\) coincida con il valore calcolato e conservato localmente durante la Fase 4.
+Se i valori non coincidono, il client segnala una possibile sostituzione della scheda cifrata.
+Solo dopo aver ricevuto la ricevuta firmata dal Registro Elettorale e verficato il commitment, il client considera conclusa la fase di invio del voto.
 
 La ricevuta consente all'elettore di conservare una prova firmata di presa in carico della scheda cifrata da parte del Registro Elettorale.
 Essa non costituisce ancora una Proof of Membership completa, poich\'e il Merkle Tree non ha una radice finale definitiva durante lo svolgimento dell'elezione.
@@ -1430,7 +1493,7 @@ L'autorizzazione pubblicabile \`e quindi:
 	(Approval_j, \sigma_{SA_j}^{Approval}).
 \]
 
-Una autorizzazione viene accettata solo se proviene da un nodo \(SA_j\) indicato in \(Params_{Election}\), se il certificato \(Cert_{SA_j}\) \`e valido e non revocato, e se la firma del nodo \`e corretta.
+Un'autorizzazione viene accettata solo se proviene da un nodo \(SA_j\) previsto dai parametri dell'elezione. Il certificato \(Cert_{SA_j}\) deve essere valido e non revocato, e la firma del nodo deve essere corretta.
 
 Quando sono disponibili almeno \(k\) autorizzazioni valide prodotte da nodi distinti, la procedura di scrutinio viene abilitata.
 A questo punto la chiave privata di scrutinio \(sk_{SA}\), custodita secondo la procedura distribuita definita nel setup, viene usata in modo controllato per decifrare le schede cifrate presenti in \(BB_{final}\).
@@ -1442,7 +1505,7 @@ Per ciascuna scheda cifrata \(EncVoto_{SA}^{(i)}\), la decifratura \`e:
 	Dec_{sk_{SA}}(EncVoto_{SA}^{(i)}).
 \]
 
-Nel caso base del referendum binario, il valore ottenuto deve appartenere all'insieme:
+Nel caso proposto, il valore ottenuto deve appartenere all'insieme:
 
 \[
 	v_i \in Options = \{\text{S\`i}, \text{No}\}.
@@ -1457,16 +1520,21 @@ Il risultato finale viene calcolato aggregando tutte le preferenze valide:
 	(count_{\text{S\`i}}, count_{\text{No}}, count_{invalid}).
 \]
 
-La Scrutiny Authority produce infine una bacheca di scrutinio:
+
+La Scrutiny Authority produce infine una bacheca di scrutinio contenente il risultato aggregato e le informazioni pubbliche necessarie a verificare la corretta autorizzazione della fase di scrutinio:
 
 \[
-	TallyBoard =
-    (ID_{Election}, Root_{final}, m, \{(i, v_i, status_i)\}_{i=1}^{m}, Tally, \{PublishedApproval_j\}, timestamp_{tally}, \Sigma_{SA}).
+\begin{aligned}
+	TallyBoard = (&ID_{Election}, Root_{final}, m, Tally,\\
+	&\{PublishedApproval_j\}, timestamp_{tally}, \Sigma_{SA}).
+\end{aligned}
 \]
 
-Dove \(\Sigma_{SA}\) rappresenta l'insieme delle firme dei nodi della Scrutiny Authority che hanno autorizzato lo scrutinio finale.
+La Scrutiny Authority firma il risultato aggregato e lo collega alla radice finale del Bulletin Board.
+In questo modo il risultato pubblicato risulta riferito all'insieme cristallizzato delle schede cifrate, senza pubblicare una corrispondenza diretta tra indice del record e preferenza decifrata.
 
-La fase di scrutinio si conclude quindi con un risultato aggregato collegato al Bulletin Board finale e alle autorizzazioni firmate dei nodi fiduciari.
+La fase di scrutinio si conclude quindi con un risultato aggregato collegato al Bulletin Board finale e alle autorizzazioni firmate dei nodi fiduciari, ma senza rendere pubblica la mappa \(i \mapsto v_i\).
+
 
 \subsection{Fase 10: pubblicazione del risultato e verificabilit\`a}
 
@@ -1475,13 +1543,9 @@ Terminato lo scrutinio, vengono pubblicate le informazioni necessarie a verifica
 La pubblicazione finale include:
 
 \begin{itemize}
-	\item \(ID_{Election}\);
+	\item la $TallyBoard$ finale.
 	\item il Bulletin Board finale \(BB_{final}\);
-	\item la radice finale \(Root_{final}\) e la firma \(\sigma_{ER}^{Root}\);
-	\item il numero totale di schede accettate \(m\);
-	\item il risultato aggregato \(Tally\);
-	\item le autorizzazioni firmate dai nodi della Scrutiny Authority che hanno abilitato lo scrutinio;
-	\item le firme dei nodi partecipanti allo scrutinio.
+	\item la firma \(\sigma_{ER}^{Root}\);
 \end{itemize}
 
 Ai fini della coerenza pubblica, il Voting Server pubblica il numero totale di token definitivamente consumati, cio\`e il numero di entry in stato \emph{committed}:
@@ -1515,8 +1579,11 @@ In particolare, controlla:
 	\item che la foglia \(Leaf_i\) contenuta nella ricevuta sia presente nella struttura pubblicata;
 	\item che il Merkle path definitivo associato a \(Leaf_i\) ricostruisca correttamente \(Root_{final}\);
 	\item che \(Root_{final}\) sia firmata dal Registro Elettorale.
+    \item verifica che \(BallotCommit_U\) contenuto nella ricevuta coincida con il valore calcolato localmente dal Voting Client durante la preparazione della scheda;
+    \item verifica che il commitment nel \(BoardRecord_i\) del Bulletin Board coincida con \(BallotCommit_U\) presente nella ricevuta.
 \end{enumerate}
 
+L'uso del Merkle Tree rende efficiente questa operazione: l'elettore verifica l'inclusione tramite un cammino di autenticazione di dimensione logaritmica rispetto al numero di schede pubblicate. Questo gli permette di non dover verificare l'intera BulletinBoard.
 Questa verifica permette all'elettore di controllare l'inclusione della propria scheda cifrata, senza rivelare la preferenza espressa.
 
 \subsubsection{Verificabilit\`a universale}
@@ -1527,15 +1594,20 @@ Un verificatore pu\`o controllare che:
 \begin{itemize}
 	\item i record pubblicati in \(BB_{final}\) siano coerenti con \(Root_{final}\);
 	\item \(Root_{final}\) sia firmata dal Registro Elettorale;
-	\item ogni scheda scrutinata provenga da un record pubblicato nel Bulletin Board finale;
+	\item il numero di record presenti nel Bulletin Board finale coincida con il numero di token in stato \emph{committed};
 	\item siano disponibili almeno \(k\) autorizzazioni valide prodotte da nodi distinti e certificati della Scrutiny Authority;
-    \item le firme dei nodi \(SA_j\) sulle autorizzazioni pubblicate siano valide;
-	\item il risultato aggregato \(Tally\) sia coerente con le preferenze decifrate e con il numero di schede accettate.
+	\item le firme dei nodi \(SA_j\) sulle autorizzazioni pubblicate siano valide;
+	\item il risultato aggregato rispetti la coerenza numerica:
+	\[
+		m = count_{\text{S\`i}} + count_{\text{No}} + InvalidCount.
+	\]
 \end{itemize}
 
-Questa forma di verificabilit\`a universale \`e una verificabilit\`a di coerenza pubblica: chiunque pu\`o controllare che il risultato pubblicato sia collegato ai record presenti nel Bulletin Board finale e alle autorizzazioni firmate dai nodi della Scrutiny Authority.
+Questa forma di verificabilit\`a universale non pubblica la corrispondenza tra ogni record \(i\) e la preferenza decifrata \(v_i\).
+La scelta riduce il rischio che la ricevuta di inclusione possa essere usata come prova trasferibile del voto espresso.
 
-La soluzione non pretende di eliminare ogni rischio residuo.
-In particolare, la collusione di almeno \(k\) nodi della Scrutiny Authority, oppure l'autorizzazione congiunta di una procedura di scrutinio non corretta, rimangono limiti da discutere nel WP3.
+Il compromesso \`e che un osservatore esterno pu\`o verificare la coerenza pubblica tra Bulletin Board, autorizzazioni di scrutinio e risultato aggregato, ma non pu\`o ricalcolare autonomamente la decifratura di ogni singola scheda.
+La correttezza della fase di decifratura resta quindi affidata alla procedura congiunta della Scrutiny Authority e alle firme dei nodi che autorizzano lo scrutinio.
+
 
 \end{document}
