@@ -8,7 +8,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class Certificate:
-    subject: str
+    id_entity: str
     role: str
     election_id: str
     public_key_pem: str
@@ -16,7 +16,6 @@ class Certificate:
     issued_at: int
     valid_until: int
     issuer: str = "GA"
-    election_type: str = "REFERENDUM"
     organization_info: str = ""
     valid_from: int = 0
     valid_to: int = 0
@@ -25,7 +24,7 @@ class Certificate:
 
     def payload_dict(self) -> dict[str, Any]:
         return {
-            "subject": self.subject,
+            "id_entity": self.id_entity,
             "role": self.role,
             "election_id": self.election_id,
             "public_key_pem": self.public_key_pem,
@@ -33,7 +32,6 @@ class Certificate:
             "issued_at": self.issued_at,
             "valid_until": self.valid_until,
             "issuer": self.issuer,
-            "election_type": self.election_type,
             "organization_info": self.organization_info,
             "valid_from": self.valid_from,
             "valid_to": self.valid_to,
@@ -251,17 +249,17 @@ class Receipt:
     election_id: str
     leaf_hash: str
     ballot_commit: str
-    encrypted_vote_hash: str
     timestamp: int
     signature: str = ""
+    encrypted_vote_hash: str = ""
 
     def payload_dict(self) -> dict[str, Any]:
         return {
             "election_id": self.election_id,
             "leaf_hash": self.leaf_hash,
             "ballot_commit": self.ballot_commit,
-            "encrypted_vote_hash": self.encrypted_vote_hash,
             "timestamp": self.timestamp,
+            "encrypted_vote_hash": self.encrypted_vote_hash,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -301,10 +299,11 @@ class SpentTokenEntry:
             "committed_at": self.committed_at,
         }
 
-
+#classe che rappresenta l'autorizzazione di scrutinio per un nodo di scrutinio
 @dataclass(frozen=True)
 class ScrutinyAuthorization:
     node_id: str
+    #certificato del nodo di scrutinio
     certificate: Certificate
     payload: dict[str, Any]
     signature: str
@@ -324,7 +323,7 @@ class TallyResult:
     count_yes: int
     count_no: int
     count_invalid: int
-    record_count: int
+    m: int
     root_final: str
     generated_at: int
     authorizations: list[ScrutinyAuthorization] = field(default_factory=list)
@@ -336,7 +335,7 @@ class TallyResult:
             "count_yes": self.count_yes,
             "count_no": self.count_no,
             "count_invalid": self.count_invalid,
-            "record_count": self.record_count,
+            "m": self.m,
             "root_final": self.root_final,
             "generated_at": self.generated_at,
             "authorization_node_ids": sorted(a.node_id for a in self.authorizations),
