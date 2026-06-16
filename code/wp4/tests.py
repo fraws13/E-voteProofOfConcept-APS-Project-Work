@@ -10,8 +10,8 @@ from main import build_environment
 from voting_client.voting_client import VotingClient
 from core.verification import verify_universal_result
 
-
-def _cast_one_vote(user_id: str = "student-001", preference: str = "YES"):
+#test 1
+def _cast_one_vote(user_id: str = "user-001", preference: str = "YES"):
     env = build_environment([user_id])
     client = VotingClient(env.params)
     auth_request = client.build_auth_request()
