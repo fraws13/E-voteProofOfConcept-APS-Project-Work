@@ -20,6 +20,8 @@
 *.dvi
 *.xdv
 *.ps
+#cartelle pycache
+__pycache__/
 
 # Cache/editor
 *.swp
