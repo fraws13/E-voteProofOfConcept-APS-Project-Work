@@ -10,7 +10,7 @@ from main import build_environment
 from voting_client.voting_client import VotingClient
 from core.verification import verify_universal_result
 
-#test 1
+
 def _cast_one_vote(user_id: str = "user-001", preference: str = "YES"):
     env = build_environment([user_id])
     client = VotingClient(env.params)
@@ -32,10 +32,10 @@ def test_valid_voter_can_vote() -> None:
 
 
 def test_non_eligible_voter_gets_no_token() -> None:
-    env = build_environment(["student-001"])
+    env = build_environment(["user-001"])
     client = VotingClient(env.params)
     try:
-        env.ga.request_voting_token("student-NOT-ELIGIBLE", client.build_auth_request())
+        env.ga.request_voting_token("user-NOT-ELIGIBLE", client.build_auth_request())
         assert False, "Expected token request to fail"
     except PermissionError:
         assert True
@@ -52,9 +52,9 @@ def test_same_token_cannot_be_used_twice() -> None:
 
 
 def test_altered_signature_is_rejected() -> None:
-    env = build_environment(["student-001"])
+    env = build_environment(["user-001"])
     client = VotingClient(env.params)
-    Enctoken = env.ga.request_voting_token("student-001", client.build_auth_request())
+    Enctoken = env.ga.request_voting_token("user-001", client.build_auth_request())
     client.store_and_verify_token(Enctoken)
     envelope = client.prepare_ballot("YES")
     tampered = replace(envelope, signature=b64e(b"invalid-signature"))
@@ -70,13 +70,13 @@ def test_tampered_record_fails_merkle_or_commitment_check() -> None:
     root = env.er.finalize()
     proof = env.er.get_merkle_proof(env.er.record_index_for_leaf_hash(receipt.leaf_hash))
     tampered_dict = env.er.records[0].to_dict()
-    tampered_dict["ballot_commit"] = "00" * 32
+    tampered_dict["Mboard"]["commit"] = "00" * 32
     tampered_record_data = canonical_json(tampered_dict)
     assert not client.verify_individual_inclusion(tampered_record_data, receipt, proof, root, env.cert_er, env.crl)
 
 
 def test_revoked_certificate_is_rejected() -> None:
-    env = build_environment(["student-001"])
+    env = build_environment(["user-001"])
     env.ga.revoke_certificate(env.cert_vs)
     revoked_crl = env.ga.current_crl(env.params.election_id)
     client = VotingClient(env.params)

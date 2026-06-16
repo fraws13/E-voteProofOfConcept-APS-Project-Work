@@ -157,7 +157,7 @@ class ScrutinyAuthority:
             for record in records:
                 try:
                     with self._measure("decrypt_vote"):
-                        plaintext = rsa_decrypt(self.private_key, b64d(record.encrypted_vote_b64))
+                        plaintext = rsa_decrypt(self.private_key, b64d(record.Mboard.encrypted_vote_b64))
                     vote_data = json.loads(plaintext.decode("utf-8"))
                     preference = vote_data.get("preference")
                     if preference == "YES":

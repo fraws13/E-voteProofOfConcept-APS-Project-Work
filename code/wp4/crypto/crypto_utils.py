@@ -23,50 +23,54 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from core.config import RSA_KEY_SIZE, RSA_PUBLIC_EXPONENT
 
+#definizione dei tipi di chiave RSA
 PrivateKey = rsa.RSAPrivateKey
 PublicKey = rsa.RSAPublicKey
 
-
+#funzione utilizzata per convertire un oggetto in una stringa JSON deterministica
 def canonical_json(data: Any) -> str:
     """Return a deterministic JSON representation for signing and hashing."""
     return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
-
+#funzione utilizzata per convertire una stringa JSON in un array di byte
 def json_bytes(data: Any) -> bytes:
     return canonical_json(data).encode("utf-8")
 
-
+#funzione utilizzata per convertire un array di byte in una stringa base64
 def b64e(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
-
+#funzione utilizzata per convertire una stringa base64 in un array di byte
 def b64d(data: str) -> bytes:
     return base64.b64decode(data.encode("ascii"))
 
-
+#funzione utilizzata per ottenere il timestamp corrente
 def now_ts() -> int:
     return int(time.time())
 
-
+#funzione utilizzata per generare un nonce casuale di 16 byte
 def generate_nonce(num_bytes: int = 16) -> str:
     return os.urandom(num_bytes).hex()
 
-
+#funzione utilizzata per generare una coppia di chiavi RSA
 def generate_rsa_key_pair() -> tuple[PrivateKey, PublicKey]:
+    #genera una chiave privata RSA, la chiave pubblica è derivata dalla chiave privata
     private_key = rsa.generate_private_key(
+
         public_exponent=RSA_PUBLIC_EXPONENT,
         key_size=RSA_KEY_SIZE,
     )
     return private_key, private_key.public_key()
 
-
+#funzione utilizzata per convertire una chiave pubblica RSA in una stringa PEM
+#in questo modo è possibile salvare la chiave pubblica in un file e certificati
 def public_key_to_pem(public_key: PublicKey) -> str:
     return public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     ).decode("utf-8")
 
-
+#funzione utilizzata per convertire una chiave privata RSA in una stringa PEM
 def private_key_to_pem(private_key: PrivateKey) -> str:
     return private_key.private_bytes(
         encoding=serialization.Encoding.PEM,

@@ -204,18 +204,18 @@ class Mboard:
 
     election_id: str
     encrypted_vote_b64: str
-    nonce_ballot: str
     timestamp: int
     commit: str
+    nonce_ballot: str
     signature: str = ""
 
     def payload_dict(self) -> dict[str, Any]:
         return {
             "election_id": self.election_id,
             "encrypted_vote_b64": self.encrypted_vote_b64,
-            "nonce_ballot": self.nonce_ballot,
             "timestamp": self.timestamp,
             "commit": self.commit,
+            "nonce_ballot": self.nonce_ballot,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -227,11 +227,7 @@ class Mboard:
 @dataclass(frozen=True)
 class BoardRecord:
     index: int
-    election_id: str
-    encrypted_vote_b64: str
-    ballot_commit: str
-    timestamp_vs: int
-    nonce_ballot: str
+    Mboard: Mboard
     timestamp_er: int
     previous_record_hash: str
     record_hash: str
@@ -239,11 +235,7 @@ class BoardRecord:
     def payload_dict(self) -> dict[str, Any]:
         return {
             "index": self.index,
-            "election_id": self.election_id,
-            "encrypted_vote_b64": self.encrypted_vote_b64,
-            "ballot_commit": self.ballot_commit,
-            "timestamp_vs": self.timestamp_vs,
-            "nonce_ballot": self.nonce_ballot,
+            "Mboard": self.Mboard.to_dict(),
             "timestamp_er": self.timestamp_er,
             "previous_record_hash": self.previous_record_hash,
         }
