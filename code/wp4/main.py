@@ -133,7 +133,7 @@ def demo() -> None:
 
     clients: list[VotingClient] = [] #lista di voting client che possono votare
     receipts: list[Receipt] = [] #lista di ricevute dei voti
-    preferences = ["sYES", "NO", "NO"] #preferenze dei voti
+    preferences = ["YES", "NO", "NO"] #preferenze dei voti
 
     print("\n[2] Autenticazione, emissione token, voto e registrazione") #stampa il numero di utenti che possono votare e le preferenze
     for user_id, preference in zip(eligible_users, preferences): #per ogni utente e preferenza, crea un voting client, emette un token, prepara un voto, apre un canale sicuro e registra il voto
