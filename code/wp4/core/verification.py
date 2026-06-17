@@ -28,9 +28,9 @@ def verify_universal_result(
     ga_public_key_pem: str,
     metrics: MetricsCollector | None = None,
 ) -> bool:
-    if result.record_count != len(register.records):
+    if result.m != len(register.records):
         return False
-    if result.count_yes + result.count_no + result.count_invalid != result.record_count:
+    if result.count_yes + result.count_no + result.count_invalid != result.m:
         return False
     if register.root_final is None:
         return False

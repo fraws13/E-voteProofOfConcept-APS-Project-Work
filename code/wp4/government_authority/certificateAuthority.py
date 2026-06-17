@@ -6,7 +6,6 @@ from core.config import (
     ROLE_SA,
     ROLE_SA_NODE,
     ROLE_VS,
-    ELECTION_TYPE,
 )
 from crypto.crypto_utils import (
     b64e,
@@ -70,10 +69,9 @@ class CertificateAuthority:
         issued_at = now_ts()
         #crea il certificato non firmato
         unsigned = Certificate(
-            subject=subject,
+            id_entity=subject,
             role=role,
             election_id=election_id,
-            election_type=ELECTION_TYPE,
             public_key_pem=public_key_pem,
             organization_info=organization_info,
             # i datetime non sono serializzabili in JSON: si convertono in timestamp interi per coerenza con il resto del modello e con la firma

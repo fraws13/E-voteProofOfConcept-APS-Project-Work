@@ -8,7 +8,7 @@ La PoC simula un referendum binario con separazione tra Government Authority, Vo
 
 Il prototipo non usa rete reale, app mobile, database persistenti o blockchain. Tutte le entità sono classi Python e tutti i registri sono strutture dati in memoria.
 
-Le primitive usate sono coerenti con i laboratori del corso:
+Le primitive utilizzate:
 
 - RSA 2048 bit con OAEP e SHA-256 per la cifratura asimmetrica della scheda;
 - RSA-PSS con SHA-256 per firme digitali;

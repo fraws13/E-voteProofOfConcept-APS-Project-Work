@@ -110,8 +110,9 @@ class VotingClient:
         if self.token is None:
             raise RuntimeError("No voting token available")
 
-        if preference not in self.params.options:
-            raise ValueError("Invalid preference for this election")
+        #eventuale eccezione per preferenza non valida
+        # if preference not in self.params.options:
+        #     raise ValueError("Invalid preference for this election")
 
         # 1. Nonce della scheda locale
         nonce_ballot = generate_nonce()
@@ -175,6 +176,7 @@ class VotingClient:
 
     #funzione utilizzata per verificare la ricevuta di voto
     def verify_receipt(self, receipt: Receipt, cert_er: Certificate, crl: CRL) -> bool:
+        #verifica la validità del certificato dell'Electoral Register
         if not verify_certificate(
             cert_er,
             expected_role=ROLE_ER,
@@ -184,36 +186,49 @@ class VotingClient:
             metrics=self.metrics,
         ):
             return False
+        #carica la chiave pubblica dell'Electoral Register
         er_public_key = load_public_key(cert_er.public_key_pem)
+        #verifica la firma della ricevuta con la chiave pubblica dell'Electoral Register
         with self._measure("verify_signature"):
             ok = verify_signature(er_public_key, json_bytes(receipt.payload_dict()), b64d(receipt.signature))
         if ok:
-            self.last_receipt = receipt
-            if self.metrics is not None:
+            self.last_receipt = receipt #aggiorna l'ultima ricevuta di voto
+            if self.metrics is not None: #aggiorna le metriche con la ricevuta di voto
                 self.metrics.add_size("Receipt", receipt.to_dict())
-        return ok
+        return ok #ritorna True se la ricevuta è valida, False altrimenti
 
+
+    #funzione utilizzata per verificare l'inclusione individuale di un record nell'albero Merkle
     def verify_individual_inclusion(
         self,
-        record_data: str,
-        receipt: Receipt,
-        proof: MerkleProof,
-        root_final: str,
-        cert_er: Certificate,
+        record_data: str, #dati del record
+        receipt: Receipt, #ricevuta di voto
+        proof: MerkleProof, #prova Merkle
+        root_final: str, #root finale
+        cert_er: Certificate, #certificato dell'Electoral Register
         crl: CRL,
     ) -> bool:
+        #verifica che l'ultimo voto sia disponibile
         if self.last_envelope is None:
             return False
+        #verifica la validità della ricevuta di voto
         if not self.verify_receipt(receipt, cert_er, crl):
             return False
+        #verifica che il commit della ricevuta corrisponda al commit del voto
         if receipt.ballot_commit != self.last_envelope.ballot_commit:
             return False
-        if receipt.encrypted_vote_hash != sha256_hex(b64d(self.last_envelope.encrypted_vote_b64)):
+        #verifica che il hash del voto cifrato corrisponda al hash del voto cifrato nella ricevuta
+        if sha256_hex(b64d(self.last_envelope.encrypted_vote_b64)) != receipt.encrypted_vote_hash:
             return False
+        #verifica che il root finale corrisponda al root finale nella ricevuta
         if proof.root != root_final:
             return False
+        #verifica la validità della prova Merkle
         with self._measure("merkle_verify_path"):
+            #verifica la validità della prova Merkle
             ok = merkle.verify_proof(record_data, proof.path, root_final)
         if self.metrics is not None:
+            #aggiorna le metriche con la prova Merkle
             self.metrics.add_size("MerkleProof", proof.to_dict())
-        return ok
+        return ok #ritorna True se la prova Merkle è valida, False altrimenti
+        #la recipt è valida ed il voto è stato inserito nell'albero Merkle

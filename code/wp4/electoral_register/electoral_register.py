@@ -32,12 +32,16 @@ class ElectoralRegister:
 
 #funzione utilizzata per aggiungere un record al Bulletin Board
     def append_record(self, envelope: Ballot, mboard: Mboard, vs_public_key_pem: str) -> Receipt:
+        #non può essere aggiunto un record a un Bulletin Board finalizzato
         if self.finalized:
+            #genera un errore se il Bulletin Board è finalizzato
             raise RuntimeError("Bulletin Board is finalized; no new record can be appended")
 
         #verifica la firma del Voting Server sul messaggio Mboard
-        vs_public_key = load_public_key(vs_public_key_pem) #
+        vs_public_key = load_public_key(vs_public_key_pem) #carica la chiave pubblica del Voting Server
+        #verifica la firma del Voting Server sul messaggio Mboard
         with self._measure("verify_signature"):
+            #se la firma del Voting Server sul messaggio Mboard non è valida, genera un errore
             if not verify_signature(vs_public_key, json_bytes(mboard.payload_dict()), b64d(mboard.signature)):
                 raise ValueError("Invalid VS signature on Mboard")
         #verifica la coerenza tra il messaggio Mboard e la busta di voto
@@ -53,35 +57,40 @@ class ElectoralRegister:
                 }
             )
         )
+        #verifica che il commit della busta di voto corrisponda al commit dichiarato nel messaggio Mboard
         if ballot_commit != mboard.commit:
+            #genera un errore se il commit della busta di voto non corrisponde al commit dichiarato nel messaggio Mboard
             raise ValueError("Mboard does not match ballot commit")
         #aggiunge il record al Bulletin Board
         with self._measure("board_registration"):
+            #calcola il hash del record precedente
             previous_hash = self.records[-1].record_hash if self.records else "GENESIS"
             #per rispettare la proprietà di append-only, ogni record deve avere un indice univoco
             unsigned = BoardRecord(
                 index=len(self.records),
-                election_id=envelope.election_id,
-                encrypted_vote_b64=envelope.encrypted_vote_b64,
-                ballot_commit=ballot_commit,
-                timestamp_vs=mboard.timestamp,
-                nonce_ballot=mboard.nonce_ballot,
+                Mboard=mboard,
                 timestamp_er=now_ts(),
                 previous_record_hash=previous_hash,
                 record_hash="",
             )
             #calcola il hash del record corrente
             record_hash = sha256_hex(json_bytes(unsigned.payload_dict()))
-            record = BoardRecord(**unsigned.payload_dict(), record_hash=record_hash) #crea il record completo
+            record = BoardRecord(
+                index=unsigned.index,
+                Mboard=mboard,
+                timestamp_er=unsigned.timestamp_er,
+                previous_record_hash=unsigned.previous_record_hash,
+                record_hash=record_hash,
+            )
             #aggiunge il record alla bulletin board
             self.records.append(record)
 
         #crea la ricevuta di registrazione del record
         receipt_unsigned = Receipt(
-            election_id=envelope.election_id,
+            election_id=envelope.election_id, #id dell'elezione
             leaf_hash=record.record_hash, #hash del record
-            ballot_commit=record.ballot_commit, #commit della busta di voto
-            encrypted_vote_hash=sha256_hex(b64d(record.encrypted_vote_b64)), #hash del voto cifrato
+            ballot_commit=ballot_commit, #commit della busta di voto
+            encrypted_vote_hash=sha256_hex(b64d(mboard.encrypted_vote_b64)),
             timestamp=now_ts(), #timestamp della ricevuta
         )
         #firma la ricevuta con la chiave privata dell'Electoral Register
@@ -95,19 +104,24 @@ class ElectoralRegister:
             self.metrics.add_size("Receipt", receipt.to_dict()) #aggiunge le metriche della ricevuta
         return receipt
 
+
+    #funzione utilizzata per ottenere l'indice del record a partire dal hash della foglia
     def record_index_for_leaf_hash(self, leaf_hash: str) -> int:
         """Risolve l'indice interno a partire dal leaf_hash firmato nella receipt."""
         for i, record in enumerate(self.records):
-            if record.record_hash == leaf_hash:
+            if record.record_hash == leaf_hash: #se il hash del record corrisponde al hash della foglia, restituisce l'indice
                 return i
+        #se non viene trovato il record, genera un errore
         raise ValueError(f"No board record found for leaf_hash={leaf_hash}")
 
+    #funzione utilizzata per convertire il record in una stringa JSON
     def record_to_merkle_data(self, index: int) -> str:
+        #converte il record in una stringa JSON
         return canonical_json(self.records[index].to_dict()) #converte il record in una stringa JSON
         #le foglie del Merkle tree devono essere stabili, quindi non possono cambiare durante l'aggiornamento dell'albero
 
 
-    #funzione utilizzata per finalizzare l'albero Merkle e la Bulletin Board
+    #funzione utilizzata per finalizzare l'albero Merkle finale e la Bulletin Board
     def finalize(self) -> str:
         if not self.records:
             #non può essere finalizzato un Bulletin Board vuoto
@@ -117,19 +131,31 @@ class ElectoralRegister:
             #costruisce la lista delle foglie dell'albero Merkle
             leaves = [self.record_to_merkle_data(i) for i in range(len(self.records))] #lista dei record convertiti in stringhe JSON
             self.root_final, self._tree = merkle.build_merkle_tree(leaves) #costruisce l'albero Merkle
-            self.finalized = True #setta il flag di finalizzazione
+            self.finalized = True #setta il flag di finalizzazione 
         return self.root_final #restituisce il hash dell'albero Merkle finale
 
+    #funzione utilizzata per ottenere il proof di inclusione del record nell'albero Merkle di un certo record indice
     def get_merkle_proof(self, record_index: int) -> MerkleProof:
+        #verifica che l'albero Merkle sia stato finalizzato
         if self.root_final is None or self._tree is None:
+            #genera un errore se l'albero Merkle non è stato finalizzato
             raise RuntimeError("Bulletin Board has not been finalized")
-        path = merkle.generate_proof(record_index, self._tree)
+
+        #genera il proof di inclusione del record nell'albero Merkle
+        path = merkle.generate_proof(record_index, self._tree) #genera il proof di inclusione del record nell'albero Merkle
         proof = MerkleProof(record_index=record_index, root=self.root_final, path=path)
         if self.metrics is not None:
+            #aggiunge le metriche del proof di inclusione del record nell'albero Merkle
             self.metrics.add_size("MerkleProof", proof.to_dict())
+        #restituisce il proof di inclusione del record nell'albero Merkle
         return proof
 
+    #funzione utilizzata per ricalcolare il root dell'albero Merkle finale
+    #UTILE PER LE VERIFICHE DI SCRUTINIO
     def recompute_root(self) -> str:
-        leaves = [self.record_to_merkle_data(i) for i in range(len(self.records))]
+        #genera la lista delle foglie dell'albero Merkle
+        leaves = [self.record_to_merkle_data(i) for i in range(len(self.records))] #lista dei record convertiti in stringhe JSON
+        #costruisce l'albero Merkle
         root, _ = merkle.build_merkle_tree(leaves)
+        #restituisce il root dell'albero Merkle
         return root
