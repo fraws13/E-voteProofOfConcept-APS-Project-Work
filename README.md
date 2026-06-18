@@ -1,4 +1,4 @@
-# WP4 - E-voting Proof of Concept
+# WP4 - E-vote Proof of Concept
 
 Questa repository contiene una Proof of Concept stand-alone in Python del protocollo di voto elettronico progettato nel WP2 del project work di **Algoritmi e Protocolli per la Sicurezza**.
 
