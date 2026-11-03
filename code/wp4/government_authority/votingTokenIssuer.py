@@ -27,7 +27,7 @@ class VotingTokenIssuer:
     ) -> None:
         self.metrics = metrics
         self.issued_tokens_db: dict[tuple[str, str], str] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.Lock() #lock per la sincronizzazione degli accessi al database dei token emessi
         self._sign = sign_callback  # Iniezione della dipendenza per la firma
 
     def _measure(self, name: str):

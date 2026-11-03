@@ -170,7 +170,6 @@ def test_scrutiny_counts_are_coherent() -> None:
     #verifica che la verifica universale sia valida
     assert verify_universal_result(env.er, result, env.cert_sa, env.crl, env.params.ga_public_key_pem)
 
-#esegue tutti i test
 def run_all_tests() -> None:
     tests = [
         test_valid_voter_can_vote,
